@@ -14,8 +14,16 @@ from core.config import (  # noqa: F401
     TELEGRAM_CHAT_ID,
     DB_PATH,
     CIDADES_EUROPA_IBERICA,
-    QUALIFICADORES_DADOS,
 )
+
+
+# Qualificadores próprios do perfil internacional. Não dependem do perfil BR:
+# os dois mercados podem evoluir seus filtros sem uma mudança de carreira em
+# um deles alterar silenciosamente o outro.
+QUALIFICADORES_DADOS = [
+    "dados", "data", "bi", "sql", "power bi", "analytics", "kpi",
+    "dashboard", "métricas", "reporting", "insights",
+]
 
 # Cargo ambíguo neste perfil: "Analyst" sozinho é usado em finanças, RH,
 # compras, risco — qualquer área. Só conta como match quando o título TAMBÉM

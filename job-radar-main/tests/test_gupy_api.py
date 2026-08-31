@@ -36,7 +36,7 @@ VAGA_API = {
     "id": 12341552,
     "isRemoteWork": False,
     "jobUrl": "https://gradus.gupy.io/job/eyJqb2JJZCI6MTIzNDE1NTIs",
-    "name": "Analista de Dados    ",
+    "name": "Analista de CRM    ",
     "publishedDate": "2026-08-28T21:28:28.868Z",
     "skills": [],
     "state": "São Paulo",
@@ -47,7 +47,7 @@ VAGA_API = {
 
 def test_converte_a_vaga_real_da_api():
     job = montar_job(VAGA_API)
-    assert job.titulo == "Analista de Dados"        # a API devolve com espaco no fim
+    assert job.titulo == "Analista de CRM"        # a API devolve com espaco no fim
     assert job.empresa == "Gradus"
     assert job.local == "São Paulo, São Paulo"
     assert job.modalidade == "Presencial"
@@ -56,10 +56,10 @@ def test_converte_a_vaga_real_da_api():
 
 
 def test_titulo_vem_com_espaco_sobrando_na_api():
-    """MEDIDO: "Analista de Dados    " com quatro espacos no fim. Sem strip,
+    """MEDIDO: "Analista de CRM    " com quatro espacos no fim. Sem strip,
     o espaco entra na chave de deduplicacao empresa|titulo e a mesma vaga
     passa duas vezes."""
-    assert montar_job({**VAGA_API, "name": "  Analista de BI  "}).titulo == "Analista de BI"
+    assert montar_job({**VAGA_API, "name": "  Analista de CRM  "}).titulo == "Analista de CRM"
 
 
 def test_data_iso_com_hora_vira_data_pura():
@@ -116,7 +116,7 @@ def test_o_local_montado_respeita_as_regras(cidade, estado, workplace, aprovada)
     """
     job = montar_job({
         **VAGA_API,
-        "name": "Analista de Dados",
+        "name": "Analista de CRM",
         "city": cidade,
         "state": estado,
         "workplaceType": workplace,

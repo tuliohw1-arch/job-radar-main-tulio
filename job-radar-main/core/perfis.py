@@ -22,9 +22,10 @@ from core.config import (
     KEYWORDS,
     KEYWORDS_CARGO_FORTE,
     KEYWORDS_CARGO_AMBIGUO,
-    QUALIFICADORES_DADOS,
+    QUALIFICADORES_DADOS as QUALIFICADORES_AREA_BR,
     FERRAMENTAS_TITULO,
     QUALIFICADORES_CARGO,
+    PRIORIDADES_CARGO,
     CIDADES,
     CIDADES_EUROPA_IBERICA,
     ATIVAR_EIXO_IBERICO_BR,
@@ -36,7 +37,7 @@ from core.config import (
 from core.config_intl import (
     KEYWORDS_INTL,
     KEYWORDS_CARGO_AMBIGUO_INTL,
-    QUALIFICADORES_DADOS,
+    QUALIFICADORES_DADOS as QUALIFICADORES_DADOS_INTL,
     TERMOS_BUSCA_INTL,
     TERMOS_POR_CICLO_INTL,
     LOCATIONS_INTL,
@@ -106,10 +107,11 @@ class Perfil:
 _REGRAS_BR = RegrasFiltro(
     keywords_forte=KEYWORDS_CARGO_FORTE,
     keywords_ambiguo=KEYWORDS_CARGO_AMBIGUO,
-    qualificadores_dados=QUALIFICADORES_DADOS,
+    qualificadores_dados=QUALIFICADORES_AREA_BR,
     ferramentas_titulo=FERRAMENTAS_TITULO,
     qualificadores_cargo=QUALIFICADORES_CARGO,
     cidades=CIDADES,
+    prioridades_cargo=PRIORIDADES_CARGO,
     mercados_remoto_aceitos=MERCADOS_REMOTO_ACEITOS,
 )
 
@@ -120,10 +122,11 @@ _REGRAS_BR = RegrasFiltro(
 _REGRAS_BR_IBERIA = RegrasFiltro(
     keywords_forte=KEYWORDS_CARGO_FORTE,
     keywords_ambiguo=KEYWORDS_CARGO_AMBIGUO,
-    qualificadores_dados=QUALIFICADORES_DADOS,
+    qualificadores_dados=QUALIFICADORES_AREA_BR,
     ferramentas_titulo=FERRAMENTAS_TITULO,
     qualificadores_cargo=QUALIFICADORES_CARGO,
     cidades=CIDADES_EUROPA_IBERICA,
+    prioridades_cargo=PRIORIDADES_CARGO,
 )
 
 # Revelo não entrou: o portal de vagas exige login pra navegar, não dá pra
@@ -250,7 +253,7 @@ PERFIL_BR = Perfil(
 _REGRAS_INTL = RegrasFiltro(
     keywords_forte=KEYWORDS_INTL,
     keywords_ambiguo=KEYWORDS_CARGO_AMBIGUO_INTL,
-    qualificadores_dados=QUALIFICADORES_DADOS,
+    qualificadores_dados=QUALIFICADORES_DADOS_INTL,
     ferramentas_titulo=[],
     qualificadores_cargo=[],
     cidades=CIDADES_INTL,
@@ -268,7 +271,7 @@ _REGRAS_INTL = RegrasFiltro(
 _REGRAS_INTL_IBERIA = RegrasFiltro(
     keywords_forte=KEYWORDS_INTL,
     keywords_ambiguo=KEYWORDS_CARGO_AMBIGUO_INTL,
-    qualificadores_dados=QUALIFICADORES_DADOS,
+    qualificadores_dados=QUALIFICADORES_DADOS_INTL,
     ferramentas_titulo=[],
     qualificadores_cargo=[],
     cidades=CIDADES_EUROPA_IBERICA,

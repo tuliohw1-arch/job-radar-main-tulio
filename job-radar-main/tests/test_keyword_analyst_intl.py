@@ -114,9 +114,10 @@ def test_especialista_e_analista_nao_entraram():
     assert PERFIL_INTL.regras.keywords_ambiguo == ["Analyst"]
 
 
-def test_os_dois_perfis_usam_o_mesmo_mecanismo():
-    """Foi a divergência silenciosa entre os dois perfis que deixou o
-    internacional sem cargo ambíguo por tanto tempo. Este teste cobra que os
-    dois pelo menos usem a MESMA lista de qualificadores."""
+def test_os_dois_perfis_tem_qualificadores_proprios_para_seus_dominios():
+    """Os perfis compartilham o mecanismo, mas não precisam compartilhar
+    conteúdo: CRM/CS no Brasil e dados no Internacional são domínios distintos."""
     from core.perfis import PERFIL_BR
-    assert PERFIL_INTL.regras.qualificadores_dados == PERFIL_BR.regras.qualificadores_dados
+    assert "data" in PERFIL_INTL.regras.qualificadores_dados
+    assert "crm" in PERFIL_BR.regras.qualificadores_dados
+    assert PERFIL_INTL.regras.qualificadores_dados != PERFIL_BR.regras.qualificadores_dados

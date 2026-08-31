@@ -1001,6 +1001,9 @@ class RegrasFiltro:
     # mercado hispanofalante-lusófono explicitamente. None = não checa
     # (BR não precisa — fonte já é 100% brasileira/portuguesa).
     idiomas_exigidos: list[str] | None = None
+    # Pontuação específica por título/categoria. Não participa do filtro;
+    # apenas substitui o peso genérico de cargo no ranking quando há match.
+    prioridades_cargo: dict[str, int] | None = None
 
 
 @dataclass
@@ -1442,7 +1445,20 @@ class Job:
         """
         av = self._avaliar(regras)
 
-        if av.bate_forte:
+        titulo_norm = _normalizar(self.titulo)
+        prioridades = regras.prioridades_cargo or {}
+        pontos_prioridade = max(
+            (
+                pontos
+                for termo, pontos in prioridades.items()
+                if _contem_termo(_normalizar(termo), titulo_norm)
+            ),
+            default=0,
+        )
+
+        if pontos_prioridade:
+            pontos_cargo = pontos_prioridade
+        elif av.bate_forte:
             pontos_cargo = _PESO_CARGO_FORTE
         elif av.bate_ambiguo:
             pontos_cargo = _PESO_CARGO_AMBIGUO

@@ -35,7 +35,7 @@ from scrapers.solides import (
 
 VAGA_API = {
     "id": 912529,
-    "title": "Analista de Dados",
+    "title": "Analista de CRM",
     "companyName": "SOMA SOLUTION",
     "city": {"id": 4378, "name": "Chapecó", "state_id": 22},
     "state": {"id": 22, "name": "Santa Catarina", "code": "SC"},
@@ -44,13 +44,13 @@ VAGA_API = {
     "createdAt": "2026-08-28",
     "redirectLink": "https://somasolution.solides.jobs/vacancies/912529?origem=portal",
     "seniority": [{"id": 4, "name": "Junior", "level": None}],
-    "description": "<h2>Analista de Dados</h2>",
+    "description": "<h2>Analista de CRM</h2>",
 }
 
 
 def test_converte_a_vaga_real_da_api():
     job = montar_job(VAGA_API)
-    assert job.titulo == "Analista de Dados"
+    assert job.titulo == "Analista de CRM"
     assert job.empresa == "SOMA SOLUTION"
     assert job.local == "Chapecó - SC"
     assert job.modalidade == "Presencial"
@@ -112,7 +112,7 @@ def test_vaga_sem_o_essencial_e_descartada(faltando):
 def test_o_local_montado_respeita_as_regras(cidade, sigla, jobtype, aprovada):
     job = montar_job({
         **VAGA_API,
-        "title": "Analista de Dados",
+        "title": "Analista de CRM",
         "city": {"name": cidade},
         "state": {"code": sigla},
         "jobType": jobtype,

@@ -4,120 +4,100 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Cargo forte: título que só existe mesmo em vaga de dados/BI, sem
-# possibilidade real de ser outra área.
+# Áreas monitoradas no perfil Brasil, em ordem de prioridade.
+# O filtro aceita títulos destas três frentes; o ranking usa a mesma ordem
+# para decidir quais vagas merecem mais destaque.
+
+# 1) Objetivo principal: CRM.
 KEYWORDS_CARGO_FORTE = [
-    "Analista de Dados",
-    "Analista BI",
-    "Analista de BI",
-    "Business Intelligence",
-    "Data Analytics",
-    "Analista de Analytics",
-    "Data Analyst",
-    "Desenvolvedor BI",
-    "Consultor BI",
-    "Analista de Inteligência de Negócios",
-    "BI Developer",
-    "BI Analyst",
-    "Analista de Reporting",
-    "Analista de Inteligência de Mercado",
-    "Analista de Indicadores",
-    "Reporting Analyst",
-    "Insights Analyst",
-    "Data Insights Analyst",
-    "MIS Analyst",
-    "Analista de MIS",
-    "Assistente de BI",
-    "Auxiliar de BI",
-    "Analista de Inteligência Comercial",
-    "Data Specialist",
-    "Data Quality Analyst",
-    "Data Intelligence Analyst",
-    "BI & Analytics Analyst",
-    "Analytics Specialist",
-    "Especialista em Dados",
-    "Analista de Planejamento e Dados",
-    # "Datos" (espanhol) não é "Dados" (português) — nenhuma keyword em
-    # português cobre título em espanhol, mesmo sendo a mesma vaga. Faz
-    # sentido aqui no pipeline BR (não só em config_intl.py) porque
-    # LinkedInScraper já busca em Argentina/Chile (ver LOCATIONS_LINKEDIN).
-    "Analista de Datos",
-    "Analítica de Datos",
+    "Analista de CRM",
+    "CRM Analyst",
+    "Especialista em CRM",
+    "Especialista de CRM",
+    "CRM Specialist",
+    "Assistente de CRM",
+    "Consultor de CRM",
+    "Consultor CRM",
+    "CRM Consultant",
 ]
 
-# Cargo ambíguo: título que também é usado em vaga sem nada a ver com
-# dados/BI (ex: "Business Analyst" e "Analista de Negócios" existem em
-# TI, finanças, RH, operações... qualquer área). Só conta como match se o
-# título TAMBÉM tiver um QUALIFICADORES_DADOS junto — é o que permite ir
-# adicionando cargo adjacente (Product Analyst, CRM Analyst, Marketing
-# Analyst etc.) sem cada um virar fonte de ruído sozinho.
+# 2) Segunda prioridade: Customer Success e Experiência do Cliente.
+KEYWORDS_CUSTOMER_SUCCESS_CX = [
+    "Analista de Customer Success",
+    "Customer Success Analyst",
+    "Especialista em Customer Success",
+    "Customer Success Specialist",
+    "Customer Success Manager",
+    "CSM",
+    "Analista de Sucesso do Cliente",
+    "Analista de Experiência do Cliente",
+    "Analista de Experiencia do Cliente",
+    "Customer Experience Analyst",
+    "CX Analyst",
+    "Analista de CX",
+]
+
+# 3) Terceira opção: relacionamento e atendimento ao cliente.
+# Mantemos títulos de função específicos para evitar que palavras genéricas
+# como "atendimento" tragam vagas de áreas sem relação com o objetivo.
+KEYWORDS_RELACIONAMENTO_ATENDIMENTO = [
+    "Analista de Relacionamento",
+    "Analista de Relacionamento com o Cliente",
+    "Analista de Relacionamento com Cliente",
+    "Analista de Atendimento",
+    "Analista de Atendimento ao Cliente",
+    "Analista de Customer Care",
+    "Customer Care Analyst",
+    "Customer Relationship Analyst",
+    "Customer Support Analyst",
+    "Analista de Suporte ao Cliente",
+]
+
+# Todos os títulos inequívocos aceitos pelo filtro.
+KEYWORDS_CARGO_FORTE += (
+    KEYWORDS_CUSTOMER_SUCCESS_CX + KEYWORDS_RELACIONAMENTO_ATENDIMENTO
+)
+
+# Títulos ambíguos só contam se também tiverem um qualificador da área.
 KEYWORDS_CARGO_AMBIGUO = [
-    "Business Analyst",
-    "Analista de Negócios",
-    "Business Analytics",
-    "Analista de Performance",
-    # MEDIDO (2026-08-22) contra 293 vagas reais do LinkedIn (4 termos, 4
-    # mercados): "Analyst" sozinho trouxe 2 vagas a mais, as DUAS certas —
-    # "Data & Analytics Analyst" (Oliver Wyman, Lisboa) e "Analytics Analyst
-    # - Remote Work" (Jalisco). Zero ruído na amostra.
-    #
-    # A Oliver Wyman e a Air Liquide ("Business & Data Integration Analyst -
-    # HR Analytics") apareceram no log do dia anterior como barradas só pelo
-    # título: sao vagas de dados que nenhuma keyword cobria, porque a lista
-    # tem os cargos COMPOSTOS ("Data Analyst", "BI Analyst") e não o
-    # substantivo sozinho.
-    #
-    # O risco previsto era "Data Center Operations Analyst" — "data center"
-    # casa o qualificador "data" sem ter nada a ver com análise. Medido: não
-    # apareceu nenhuma vez nas 293. Se aparecer, é aqui que se olha.
-    #
-    # NÃO entraram, e por quê:
-    #   "Especialista" — 0 vagas a mais na mesma amostra. A vaga que motivou
-    #       a ideia ("Especialista de Inteligencia de Negocio (BI)", TeleVía)
-    #       não caiu na coleta. Sem número seria palpite.
-    #   "Analista"     — 3 a mais, mas 2 eram "Analista de Banco de Dados".
-    #       DBA é outra profissão, mesma razão que mantém "desenvolvedor" e
-    #       "engenheiro" fora. Decisão da usuária em 22/08.
-    "Analyst",
+    "Customer Success",
+    "Customer Experience",
+    "Experiência do Cliente",
+    "Experiencia do Cliente",
+    "Relacionamento com Cliente",
+    "Relacionamento com o Cliente",
 ]
 
-# Termo que precisa aparecer junto no título quando o cargo é ambíguo, pra
-# confirmar que é vaga de dados/BI e não de outra área qualquer.
+# Qualificadores usados exclusivamente junto aos cargos ambíguos acima.
 QUALIFICADORES_DADOS = [
-    "dados",
-    "data",
-    "bi",
-    "sql",
-    "power bi",
-    "analytics",
-    "kpi",
-    "dashboard",
-    "métricas",
-    "reporting",
-    "insights",
+    "customer",
+    "cliente",
+    "crm",
+    "cx",
+    "cs",
+    "sucesso",
+    "experiência",
+    "experiencia",
+    "relacionamento",
+    "atendimento",
 ]
 
-# Ferramenta que aparece como núcleo do título ("Analista de Power BI").
-# Só conta como match se o título TAMBÉM tiver uma palavra de cargo — é o
-# espelho da regra de KEYWORDS_CARGO_AMBIGUO: lá o cargo é ambíguo e pede
-# domínio, aqui a ferramenta é ambígua e pede cargo. Sem isso, "Power BI"
-# sozinho aprovaria "Power BI Senior" e "Desenvolvedor (Power BI + Python)",
-# que são vaga de desenvolvimento, não de análise.
-FERRAMENTAS_TITULO = [
-    "Power BI",
-]
+# Não há ferramenta isolada aprovada no MVP. Uma ferramenta no título não
+# basta para provar que a vaga pertence a uma das três áreas monitoradas.
+FERRAMENTAS_TITULO = []
+QUALIFICADORES_CARGO = []
 
-# Palavra de cargo que confirma que a vaga de ferramenta é de análise.
-# "desenvolvedor"/"developer"/"engenheiro" ficam FORA de propósito: é o que
-# mantém vaga de dev fora do radar.
-QUALIFICADORES_CARGO = [
-    "analista",
-    "analyst",
-    "especialista",
-    "specialist",
-    "consultor",
-    "consultant",
-]
+# Peso do cargo no ranking, usando a mesma taxonomia do filtro.
+# CRM > Customer Success/CX > Relacionamento/Atendimento.
+PRIORIDADES_CARGO = {
+    **{cargo: 3 for cargo in [
+        "Analista de CRM", "CRM Analyst", "Especialista em CRM",
+        "Especialista de CRM", "CRM Specialist", "Assistente de CRM",
+        "Consultor de CRM", "Consultor CRM", "CRM Consultant",
+    ]},
+    **{cargo: 2 for cargo in KEYWORDS_CUSTOMER_SUCCESS_CX},
+    **{cargo: 1 for cargo in KEYWORDS_RELACIONAMENTO_ATENDIMENTO},
+}
 
 KEYWORDS = KEYWORDS_CARGO_FORTE + KEYWORDS_CARGO_AMBIGUO
 
@@ -136,11 +116,12 @@ KEYWORDS = KEYWORDS_CARGO_FORTE + KEYWORDS_CARGO_AMBIGUO
 # por sorte via outro termo. Com a derivação automática isso não pode mais
 # acontecer — toda keyword nova em KEYWORDS já vira busca também.
 TERMOS_CARGO_EXTRA = [
-    # termos mais amplos que a keyword exata, mantidos por dar rede mais
-    # larga na busca (a keyword em si é mais restrita, de propósito, pra
-    # não gerar falso positivo no filtro de título).
-    "power bi",
-    "inteligência de mercado",
+    "crm",
+    "customer success",
+    "customer experience",
+    "experiência do cliente",
+    "relacionamento com cliente",
+    "atendimento ao cliente",
 ]
 
 TERMOS_CARGO = sorted(set(k.lower() for k in KEYWORDS) | set(TERMOS_CARGO_EXTRA))
@@ -155,14 +136,7 @@ TERMOS_CARGO = sorted(set(k.lower() for k in KEYWORDS) | set(TERMOS_CARGO_EXTRA)
 # (13 de 26) dos timeouts dessas 4 fontes sendo só 3 dos 42 termos (7%) —
 # confirma o padrão relatado. Removidos por render zero e custarem sessão
 # igual a um termo de cargo.
-TERMOS_FERRAMENTA = [
-    "sql",
-    "python",
-    "tableau",
-    "qlik",
-    "looker",
-    "bigquery",
-]
+TERMOS_FERRAMENTA = []
 
 TERMOS_BUSCA = TERMOS_CARGO + TERMOS_FERRAMENTA
 
@@ -185,11 +159,11 @@ TERMOS_BUSCA = TERMOS_CARGO + TERMOS_FERRAMENTA
 # de 18 min desde que o Indeed saiu, então cabe — antes disso, com 37 min,
 # não caberia. É essa folga que torna a mudança possível agora.
 TERMOS_PRIORITARIOS = [
-    "analista de dados",
-    "analista de bi",
-    "business intelligence",
-    "data analyst",
-    "power bi",
+    "analista de crm",
+    "crm",
+    "customer success",
+    "customer experience",
+    "experiência do cliente",
 ]
 
 # Medido: os TERMOS_BUSCA inteiros (hoje 42) rodando em TODO ciclo é o que

@@ -22,7 +22,7 @@ from core.perfis import PERFIL_BR
 
 def _vaga(local: str, modalidade: str = "Presencial") -> Job:
     return Job(
-        titulo="Analista de Dados",
+        titulo="Analista de CRM",
         empresa="Empresa",
         local=local,
         link="https://www.linkedin.com/jobs/view/" + local,

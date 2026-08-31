@@ -23,7 +23,7 @@ def vaga_real():
     return {
         "vacancy": {
             "id": "8a0d3627-4900-4b37-8f04-b448821ea09f",
-            "title": "Analista de Dados",
+            "title": "Analista de CRM",
             "jobModel": ["IN_PERSON"],
             "localization": {
                 "id": "41eee193-0280-4719-a6a9-02f498df8b28",
@@ -53,7 +53,7 @@ HOJE = date(2026, 8, 18)
 
 def test_converte_a_vaga_real_inteira():
     job = montar_job(vaga_real(), hoje=HOJE)
-    assert job.titulo == "Analista de Dados"
+    assert job.titulo == "Analista de CRM"
     assert job.empresa == "OURO SAFRA"
     assert job.local == "Pilar do Sul - SP"
     assert job.modalidade == "Presencial"
@@ -111,7 +111,7 @@ def test_local_sai_no_formato_que_o_filtro_de_cidade_entende():
     from core.perfis import PERFIL_BR
     from core.job import Job
 
-    job = Job(titulo="Analista de Dados", empresa="X",
+    job = Job(titulo="Analista de CRM", empresa="X",
               local=_local({"city": "Natal", "province": "RN", "country": "Brasil"}),
               link="https://x/1", site="Senior", modalidade="Presencial")
     assert job.combina_com(PERFIL_BR.regras)
