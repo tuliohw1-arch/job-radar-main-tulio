@@ -24,14 +24,15 @@ def _vaga(titulo: str, local: str = "Remoto - Brasil") -> Job:
     "CRM Analyst",
     "Customer Success Analyst",
     "Analista de Experiência do Cliente",
-    "Analista de Atendimento ao Cliente",
-    "Analista de Relacionamento com Cliente",
+
 ])
-def test_titulos_do_mvp_passam(titulo):
+def test_titulos_das_areas_prioritarias_passam(titulo):
     assert _vaga(titulo).combina_com(REGRAS)
 
 
 @pytest.mark.parametrize("titulo", [
+    "Analista de Atendimento ao Cliente",
+    "Analista de Relacionamento com Cliente",
     "Analista de Dados",
     "Business Intelligence Analyst",
     "Analista de Banco de Dados",
