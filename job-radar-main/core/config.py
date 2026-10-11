@@ -19,6 +19,15 @@ KEYWORDS_CARGO_FORTE = [
     "Consultor de CRM",
     "Consultor CRM",
     "CRM Consultant",
+    "Analista de CRM Operations",
+    "CRM Operations Analyst",
+    "CRM Ops Analyst",
+    "CRM Operations Specialist",
+    "Analista de Automação de Marketing",
+    "Marketing Automation Analyst",
+    "Marketing Automation Specialist",
+    "Lifecycle Marketing Analyst",
+    "Retention Marketing Analyst",
 ]
 
 # 2) Segunda prioridade: Customer Success e Experiência do Cliente.
@@ -40,17 +49,7 @@ KEYWORDS_CUSTOMER_SUCCESS_CX = [
 # 3) Terceira opção: relacionamento e atendimento ao cliente.
 # Mantemos títulos de função específicos para evitar que palavras genéricas
 # como "atendimento" tragam vagas de áreas sem relação com o objetivo.
-KEYWORDS_RELACIONAMENTO_ATENDIMENTO = [
-    "Analista de Relacionamento",
-    "Analista de Relacionamento com o Cliente",
-    "Analista de Relacionamento com Cliente",
-    "Analista de Atendimento",
-    "Analista de Atendimento ao Cliente",
-    "Analista de Customer Care",
-    "Customer Care Analyst",
-    "Customer Relationship Analyst",
-    "Customer Support Analyst",
-    "Analista de Suporte ao Cliente",
+KEYWORDS_RELACIONAMENTO_ATENDIMENTO = []
 ]
 
 # Todos os títulos inequívocos aceitos pelo filtro.
@@ -201,27 +200,7 @@ TERMOS_POR_CICLO = 10
 # Custo: LOCATIONS_LINKEDIN_CIDADES_PRESENCIAL e derivada daqui, entao
 # cada cidade e uma busca a mais por termo no LinkedIn. Sai de 11 cidades
 # para 8 — menos requisicao por ciclo E cobrindo Manaus, que faltava.
-CIDADES = [
-    "Remoto",
-    # As seis do requisito
-    "Campina Grande",
-    "João Pessoa",
-    "Recife",
-    "Natal",
-    "Caruaru",
-    "Manaus",
-    # Mantidas por decisao da usuaria, alem do requisito minimo
-    "Maceió",
-    "Aracaju",
-    # Fortaleza-CE: pedida em 21/08/2026, presencial e híbrida como as
-    # demais. Cuidado que ela exige: existem "Fortaleza de Minas" (MG),
-    # "Fortaleza dos Nogueiras" (MA) e "Fortaleza dos Valos" (RS) — as três
-    # batem o nome. Quem as barra é _UF_DA_CIDADE["fortaleza"] = "ce" em
-    # job.py, e ela só funciona pro formato do LinkedIn ("Fortaleza de
-    # Minas, Minas Gerais, Brazil") desde 5e91895, que ensinou a guarda a
-    # ler estado por extenso. Sem aquele commit, esta cidade entraria com
-    # três falsos positivos junto.
-    "Fortaleza",
+CIDADES = ["Remoto"]
 ]
 
 # MEDIDO: "Data Analyst @ Lisboa" e "Analista de Datos @ Madrid" reprovavam
@@ -307,7 +286,7 @@ LOCATIONS_LINKEDIN = ["Brazil"]
 # "Espanha" FICA como está: foi medido e resolve (9 de 10 na Espanha, 215
 # vagas no histórico). Argentina/Chile/Portugal se escrevem igual nos dois
 # idiomas. Ou seja: só muda o que está comprovadamente quebrado.
-LOCATIONS_LINKEDIN_REMOTO_APENAS = ["Argentina", "Chile", "Mexico", "Colombia", "Espanha", "Portugal"]
+LOCATIONS_LINKEDIN_REMOTO_APENAS = []
 
 # MEDIDO: a passada nacional acima (location="Brazil") varre o país inteiro
 # e só sobra o que bate em CIDADES depois do filtro — pra termo concorrido
@@ -342,7 +321,7 @@ LOCATIONS_LINKEDIN_CIDADES_PRESENCIAL = [c for c in CIDADES if c != "Remoto"]
 # quando o texto disser isso literalmente (guarda-chuva de verdade, não
 # substituto de nome de país). Portugal e Espanha entraram nominalmente
 # pelo mesmo motivo, desde antes.
-MERCADOS_REMOTO_ACEITOS = ["Brasil", "LATAM", "Argentina", "Chile", "México", "Colômbia", "Portugal", "Espanha"]
+MERCADOS_REMOTO_ACEITOS = ["Brasil"]
 
 INTERVALO_MINUTOS = int(os.getenv("INTERVALO_MINUTOS", 180))
 
@@ -358,6 +337,7 @@ INTERVALO_MINUTOS = int(os.getenv("INTERVALO_MINUTOS", 180))
 # com o pedido ("vaga de score alto na hora, resto agrupado"); 6 deixava
 # 74% imediata (pouca redução de ruído); 8 deixava só 2% (digest com
 # praticamente tudo, quase nenhuma vaga "excelente" se destacando na hora).
+LIMIAR_RELEVANCIA_MINIMA = 7
 LIMIAR_DIGEST_IMEDIATO = 7
 
 # Hora UTC a partir da qual o digest diário pode sair (uma vez por perfil,
