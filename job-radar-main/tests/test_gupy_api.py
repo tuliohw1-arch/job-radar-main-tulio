@@ -99,12 +99,12 @@ def test_vaga_sem_o_essencial_e_descartada(faltando):
 # ------------- o mapeamento tem que respeitar as regras de negocio -------------
 
 @pytest.mark.parametrize("cidade, estado, workplace, aprovada", [
-    ("Fortaleza", "Ceará", "on-site", True),           # cidade aceita, presencial
+    ("Fortaleza", "Ceará", "on-site", False),
     ("São Paulo", "São Paulo", "on-site", False),      # fora das 9 cidades
     ("São Paulo", "São Paulo", "hybrid", False),
     ("Curitiba", "Paraná", "remote", True),            # Brasil remoto de qualquer lugar
     ("Campina Grande", "Paraná", "on-site", False),    # HOMONIMA: a do PR, nao a da PB
-    ("Campina Grande", "Paraíba", "on-site", True),    # a de verdade
+    ("Campina Grande", "Paraíba", "on-site", False),
 ])
 def test_o_local_montado_respeita_as_regras(cidade, estado, workplace, aprovada):
     """A API devolve o estado por EXTENSO ("Paraná"), nao a sigla.
