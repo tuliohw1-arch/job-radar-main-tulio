@@ -39,16 +39,13 @@ jobs:
           pip install -r requirements.txt
           python -m playwright install --with-deps chromium
 
-      - name: Rodar JobRadar (um ciclo de cada perfil)
+      - name: Rodar JobRadar (somente vagas remotas do Brasil)
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        # Antes disso só o perfil Brasil rodava aqui — main_intl.py existia
-        # no repositório mas nunca foi chamado pelo workflow, então o
-        # pipeline internacional nunca rodou de verdade em produção. Agora é
-        # um projeto só com dois perfis selecionáveis (ver core/perfis.py); os
-        # dois rodam na mesma execução/commit, um após o outro.
-        run: python main.py --perfil brasil internacional --once
+        # O workflow de produção executa apenas o perfil Brasil. O scraper
+        # brasileiro busca exclusivamente vagas remotas no mercado brasileiro.
+        run: python main.py --perfil brasil --once
 
       - name: Salvar vagas já vistas (evita notificação duplicada)
         run: |

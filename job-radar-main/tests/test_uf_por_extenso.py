@@ -74,8 +74,8 @@ def test_homonima_com_estado_por_extenso_e_barrada():
     assert not _vaga("Campina Grande do Sul, Paraná, Brazil").combina_com(PERFIL_BR.regras)
 
 
-def test_a_cidade_certa_continua_passando():
-    """A outra metade: apertar a guarda não pode barrar a vaga de verdade."""
+def test_vagas_presenciais_em_cidades_brasileiras_sao_rejeitadas():
+    """A regra atual exige modalidade remota; cidade brasileira não é exceção."""
     for local in [
         "Campina Grande, Paraíba, Brazil",
         "Recife, Pernambuco, Brazil",
@@ -86,7 +86,7 @@ def test_a_cidade_certa_continua_passando():
         "João Pessoa, Paraíba, Brazil",
         "Caruaru, Pernambuco, Brazil",
     ]:
-        assert _vaga(local).combina_com(PERFIL_BR.regras), local
+        assert not _vaga(local).combina_com(PERFIL_BR.regras), local
 
 
 @pytest.mark.parametrize("local", [
@@ -113,6 +113,6 @@ def test_homonimas_de_fortaleza_sao_barradas(local):
     "Fortaleza",
 ])
 @pytest.mark.parametrize("modalidade", ["Híbrido", "Presencial"])
-def test_fortaleza_de_verdade_passa(local, modalidade):
-    """A outra metade: barrar homônima não pode barrar a cidade pedida."""
-    assert _vaga(local, modalidade).combina_com(PERFIL_BR.regras)
+def test_fortaleza_hibrida_ou_presencial_e_rejeitada(local, modalidade):
+    """Nem mesmo cidade antes permitida pode liberar vaga não remota."""
+    assert not _vaga(local, modalidade).combina_com(PERFIL_BR.regras)

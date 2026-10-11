@@ -1,7 +1,7 @@
 <div align="center">
 
 # 📡 JobRadar
-### Monitor Automatizado de Vagas de Dados & BI
+### Monitor de vagas remotas de CRM e áreas adjacentes
 
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-Scraping-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
@@ -111,9 +111,10 @@ Vaga de alta relevância chega na hora, com nível, data de publicação e link.
 
 O filtro existe para uma busca específica, e as regras estão explícitas em `core/config.py`:
 
-- **Brasil remoto:** aceito de qualquer lugar do país.
-- **Brasil presencial ou híbrido:** só em Campina Grande-PB, João Pessoa-PB, Recife-PE, Natal-RN, Caruaru-PE, Manaus-AM, Maceió-AL, Aracaju-SE e Fortaleza-CE.
-- **Internacional:** **só remoto**, e só em mercados de língua portuguesa ou espanhola. Presencial e híbrido fora do Brasil são rejeitados; `Remote — US only` é rejeitado.
+- **Brasil remoto:** somente vagas explicitamente remotas e com escopo de contratação no Brasil.
+- **Híbrido e presencial:** sempre rejeitados, inclusive em Belo Horizonte.
+- **Internacional:** o workflow não executa o perfil internacional; vagas com escopo explícito fora do Brasil ou sem escopo confirmado são rejeitadas.
+- **Compatibilidade:** CRM/CRM Operations é prioridade; Customer Success e experiência do cliente entram apenas em cargos específicos. Vagas abaixo de 7/10 são descartadas, não enviadas ao digest.
 
 Cidade homônima é tratada: `Campina Grande do Sul, Paraná` e `Fortaleza de Minas, Minas Gerais` são barradas pela conferência de UF, que entende tanto a sigla quanto o estado por extenso.
 

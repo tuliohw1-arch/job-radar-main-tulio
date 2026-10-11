@@ -194,7 +194,7 @@ _SCRAPERS_BR = [
     DefinicaoScraper(CathoScraper, FREQUENCIA_BAIXA),       # <1%, timeout frequente em headless
     DefinicaoScraper(GeekHunterScraper, FREQUENCIA_BAIXA),  # <1%
     DefinicaoScraper(Jobs99Scraper, FREQUENCIA_BAIXA),      # <1%, fonte confirmada funcionando
-    DefinicaoScraper(WeWorkRemotelyIntlScraper, FREQUENCIA_BAIXA),  # nova, sem medição própria
+    # Fonte internacional removida do perfil Brasil.
     # MEDIDO ao vivo antes de ligar (3 termos, 398 vagas brutas): rendimento
     # de 0,3% — abaixo da Sólides (1,1%), a fonte mais fraca que ficou. A
     # busca da API casa pedaço de palavra, não o termo: "analista bi" trouxe

@@ -147,6 +147,12 @@ _MERCADOS_REMOTO = {
     "united kingdom": "Reino Unido",
     "reino unido": "Reino Unido",
     "india": "Índia",
+    "worldwide": "Global",
+    "world wide": "Global",
+    "global": "Global",
+    "anywhere": "Global",
+    "work from anywhere": "Global",
+    "globally": "Global",
     "brazil": "Brasil",
     "brasil": "Brasil",
     "portugal": "Portugal",
@@ -1347,6 +1353,14 @@ class Job:
         # valor sobrevivente não era o aceito, mesmo quando o outro mercado
         # declarado era. Interseção de conjuntos em vez de igualdade de
         # string: aprova se qualquer mercado declarado bater.
+        # "Worldwide/global/anywhere" não confirma elegibilidade no Brasil:
+        # rejeitar explicitamente em vez de tratar como remoto sem restrição.
+        if bate_remoto and any(
+            termo in local_norm
+            for termo in ("worldwide", "world wide", "global", "globally", "anywhere", "work from anywhere")
+        ):
+            bate_remoto = False
+
         if bate_remoto and regras.mercados_remoto_aceitos is not None:
             if escopos:
                 mercados_aceitos_norm = {_normalizar(m) for m in regras.mercados_remoto_aceitos}

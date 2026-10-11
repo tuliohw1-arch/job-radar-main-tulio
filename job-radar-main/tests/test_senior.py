@@ -114,7 +114,7 @@ def test_local_sai_no_formato_que_o_filtro_de_cidade_entende():
     job = Job(titulo="Analista de CRM", empresa="X",
               local=_local({"city": "Natal", "province": "RN", "country": "Brasil"}),
               link="https://x/1", site="Senior", modalidade="Presencial")
-    assert job.combina_com(PERFIL_BR.regras)
+    assert not job.combina_com(PERFIL_BR.regras)  # presencial agora é sempre rejeitado
     assert extrair_escopo_remoto("Natal - RN", "Remoto") == {"Brasil"}
 
 

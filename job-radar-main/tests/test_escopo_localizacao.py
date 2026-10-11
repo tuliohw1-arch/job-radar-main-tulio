@@ -124,13 +124,18 @@ def _vaga(local, modalidade, titulo="Analista de CRM"):
 
 @pytest.mark.parametrize("local", [
     "Home Office", "100% Remoto", "Trabalhe de casa", "Teletrabalho",
-    "Teletrabajo", "Trabajo a distancia", "Remoto", "Remote", "Anywhere",
+    "Teletrabajo", "Trabajo a distancia", "Remoto", "Remote",
 ])
 def test_remoto_reconhecido_quando_a_fonte_nao_preenche_modalidade(local):
     """Nem toda fonte expoe modalidade no card. Sem o fallback pelo texto
     de local, todo o vocabulario de TERMOS_REMOTO ficava inalcancavel e a
     vaga remota era descartada."""
     assert _vaga(local, "").combina_com(PERFIL_BR.regras)
+
+
+def test_anywhere_sem_escopo_brasileiro_e_rejeitado():
+    """Anywhere pode incluir mercados fora do Brasil e não confirma elegibilidade."""
+    assert not _vaga("Anywhere", "").combina_com(PERFIL_BR.regras)
 
 
 @pytest.mark.parametrize("local, modalidade", [

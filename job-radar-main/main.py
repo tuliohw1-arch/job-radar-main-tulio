@@ -6,7 +6,7 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime, timezone
 
-from core.config import DIGEST_HORA_UTC, INTERVALO_MINUTOS, LIMIAR_DIGEST_IMEDIATO
+from core.config import DIGEST_HORA_UTC, INTERVALO_MINUTOS, LIMIAR_DIGEST_IMEDIATO, LIMIAR_RELEVANCIA_MINIMA
 from database.database import (
     BancoVazioSuspeito,
     definir_metadado,
@@ -321,6 +321,13 @@ def ciclo_de_busca(perfil: Perfil):
                 if v.id not in ids_aprovadas and v.rejeitada_so_pelo_cargo(perfil.regras)
             )
 
+            # Alta precisão: vagas abaixo do mínimo são descartadas, não
+            # enviadas ao digest.
+            vagas_filtradas = [
+                v for v in vagas_filtradas
+                if v.relevancia >= LIMIAR_RELEVANCIA_MINIMA
+            ]
+
             # Eixo secundário (Ibéria, quando ligado): mesma regra de cargo,
             # cidade diferente — sem duplicar o que já bateu na regra
             # primária.
@@ -329,7 +336,11 @@ def ciclo_de_busca(perfil: Perfil):
                 ids_filtradas = {v.id for v in vagas_filtradas}
                 candidatas, descartes_secundario = filtrar_vagas(vagas, perfil.regras_eixo_secundario)
                 descartes_escopo_ciclo.update(descartes_secundario)
-                vagas_secundarias = [v for v in candidatas if v.id not in ids_filtradas]
+                vagas_secundarias = [
+                    v for v in candidatas
+                    if v.id not in ids_filtradas
+                    and v.relevancia >= LIMIAR_RELEVANCIA_MINIMA
+                ]
 
             total_filtradas += len(vagas_filtradas) + len(vagas_secundarias)
 
