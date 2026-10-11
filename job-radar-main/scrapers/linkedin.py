@@ -168,26 +168,14 @@ class LinkedInScraper(BaseScraper):
     def buscar_vagas(self) -> list[Job]:
         vagas: list[Job] = []
         for termo in self.termos_busca:
+            # Busca exclusivamente vagas remotas no mercado brasileiro.
             for location in self.locations:
-                vagas.extend(self._buscar_termo(termo, location, remoto=False))
                 vagas.extend(self._buscar_termo(termo, location, remoto=True))
-            for location in self.locations_remoto_apenas:
-                vagas.extend(self._buscar_termo(termo, location, remoto=True))
-            for location in self.locations_cidades_presencial:
-                vagas.extend(self._buscar_termo(
-                    termo, location, remoto=False,
-                    max_paginas=MAX_PAGINAS_CIDADE, rotulo="cidade",
-                ))
 
-        total_mercados = (
-            len(self.locations) + len(self.locations_remoto_apenas)
-            + len(self.locations_cidades_presencial)
-        )
+        total_mercados = len(self.locations)
         logger.info(
             f"[LinkedIn] {len(vagas)} vaga(s) encontrada(s) no total "
-            f"({total_mercados} mercado(s): {', '.join(self.locations)} [completo] + "
-            f"{', '.join(self.locations_remoto_apenas)} [remoto apenas] + "
-            f"{len(self.locations_cidades_presencial)} cidade(s) [presencial/híbrido])"
+            f"({total_mercados} mercado(s), somente remoto): {', '.join(self.locations)}
         )
         return vagas
 
