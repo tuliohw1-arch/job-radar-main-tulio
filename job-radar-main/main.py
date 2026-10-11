@@ -336,7 +336,11 @@ def ciclo_de_busca(perfil: Perfil):
                 ids_filtradas = {v.id for v in vagas_filtradas}
                 candidatas, descartes_secundario = filtrar_vagas(vagas, perfil.regras_eixo_secundario)
                 descartes_escopo_ciclo.update(descartes_secundario)
-                vagas_secundarias = [v for v in candidatas if v.id not in ids_filtradas]
+                vagas_secundarias = [
+                    v for v in candidatas
+                    if v.id not in ids_filtradas
+                    and v.relevancia >= LIMIAR_RELEVANCIA_MINIMA
+                ]
 
             total_filtradas += len(vagas_filtradas) + len(vagas_secundarias)
 
