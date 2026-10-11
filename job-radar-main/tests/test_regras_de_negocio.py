@@ -57,6 +57,19 @@ def test_cargos_genericos_nao_entram():
     assert not vaga("Analista de Dados").combina_com(PERFIL_BR.regras)
 
 
+@pytest.mark.parametrize("titulo", [
+    "CRM Analyst (Hybrid)",
+    "Analista de CRM Híbrida",
+    "Analista de CRM Semi-presencial",
+    "CRM Analyst - In-person",
+    "CRM Analyst - Office-based",
+])
+def test_titulo_contradiz_modalidade_remota(titulo):
+    vaga_remota = vaga(titulo, local="Remote - Brazil", modalidade="Remoto")
+    assert vaga_remota.modalidade in {"Híbrido", "Presencial"}
+    assert not vaga_remota.combina_com(PERFIL_BR.regras)
+
+
 def test_minimo_de_relevancia_alto():
     assert LIMIAR_RELEVANCIA_MINIMA >= 7
 
