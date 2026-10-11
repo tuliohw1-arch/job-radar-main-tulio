@@ -71,7 +71,8 @@ def test_espanha_e_a_unica_divergencia_da_lista_internacional():
     foi medida e resolve (9 de 10 na Espanha).
     """
     divergentes = set(LOCATIONS_LINKEDIN_REMOTO_APENAS) - set(LOCATIONS_INTL)
-    assert divergentes == {"Espanha"}
+    assert LOCATIONS_LINKEDIN_REMOTO_APENAS == []
+    assert divergentes == set()
 
 
 def test_busca_por_cidade_nao_tem_pais_nem_remoto():
