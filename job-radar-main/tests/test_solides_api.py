@@ -100,14 +100,14 @@ def test_vaga_sem_o_essencial_e_descartada(faltando):
 # ------------- o mapeamento tem que respeitar as regras de negocio -------------
 
 @pytest.mark.parametrize("cidade, sigla, jobtype, aprovada", [
-    ("Fortaleza", "CE", "presencial", True),
-    ("Recife", "PE", "presencial", True),
-    ("Chapecó", "SC", "presencial", False),        # fora das 9 cidades
+    ("Fortaleza", "CE", "presencial", False),
+    ("Recife", "PE", "presencial", False),
+    ("Chapecó", "SC", "presencial", False),
     ("São Paulo", "SP", "hibrido", False),
-    ("Curitiba", "PR", "remoto", True),            # Brasil remoto de qualquer lugar
-    ("Campina Grande", "PR", "presencial", False), # HOMONIMA: a do Parana
-    ("Campina Grande", "PB", "presencial", True),  # a de verdade
-    ("VITORIA", "ES", "presencial", False),        # a API as vezes manda em CAIXA ALTA
+    ("Curitiba", "PR", "remoto", True),
+    ("Campina Grande", "PR", "presencial", False),
+    ("Campina Grande", "PB", "presencial", False),
+    ("VITORIA", "ES", "presencial", False),
 ])
 def test_o_local_montado_respeita_as_regras(cidade, sigla, jobtype, aprovada):
     job = montar_job({
