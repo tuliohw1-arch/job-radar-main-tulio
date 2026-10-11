@@ -41,7 +41,7 @@ VAGA_API = {
     "state": {"id": 22, "name": "Santa Catarina", "code": "SC"},
     "jobType": "presencial",
     "homeOffice": False,
-    "createdAt": "2026-08-28",
+    "createdAt": date.today().isoformat(),
     "redirectLink": "https://somasolution.solides.jobs/vacancies/912529?origem=portal",
     "seniority": [{"id": 4, "name": "Junior", "level": None}],
     "description": "<h2>Analista de CRM</h2>",
@@ -54,7 +54,7 @@ def test_converte_a_vaga_real_da_api():
     assert job.empresa == "SOMA SOLUTION"
     assert job.local == "Chapecó - SC"
     assert job.modalidade == "Presencial"
-    assert job.publicado_em == "2026-08-28"
+    assert job.publicado_em == date.today().isoformat()
     assert job.site == "Solides"
 
 
@@ -69,7 +69,7 @@ def test_data_ja_vem_no_formato_certo():
     """createdAt vem como "2026-08-28", sem hora -- ao contrario da Gupy, que
     manda ISO completo e precisa de corte."""
     job = montar_job(VAGA_API)
-    assert job.publicado_em_legivel == "28/08/2026"
+    assert job.publicado_em_legivel == date.today().strftime("%d/%m/%Y")
     assert job.publicacao_antiga is False
 
 
