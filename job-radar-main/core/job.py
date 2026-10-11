@@ -80,8 +80,8 @@ def _e_remoto(texto: str) -> bool:
 # (Analista de Datos) - Hybrid" — o filtro do próprio LinkedIn às vezes
 # diverge do anúncio real. Como o perfil internacional só quer remoto de
 # verdade, o título vence quando contradiz a classificação da fonte.
-_TERMOS_TITULO_HIBRIDO = ["hybrid", "hibrido"]
-_TERMOS_TITULO_PRESENCIAL = ["on-site", "onsite", "on site", "presencial"]
+_TERMOS_TITULO_HIBRIDO = ["hybrid", "hibrido", "hibrida", "semi-presencial", "semi presencial"]
+_TERMOS_TITULO_PRESENCIAL = ["on-site", "onsite", "on site", "presencial", "in-person", "in person", "office-based"]
 
 
 def _modalidade_pelo_titulo(titulo: str) -> str | None:

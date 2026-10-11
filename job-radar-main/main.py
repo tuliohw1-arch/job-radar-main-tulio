@@ -25,7 +25,7 @@ from notifier.telegram import (
     processar_feedback_pendente,
 )
 from core.perfis import FREQUENCIA_ALTA, PERFIS, Perfil
-from utils.filtro import filtrar_vagas
+from utils.filtro import filtrar_publicadas_recentemente, filtrar_vagas
 from core.logger import get_logger
 
 logger = get_logger()
@@ -311,13 +311,27 @@ def ciclo_de_busca(perfil: Perfil):
                 continue
 
             total_brutas += len(vagas)
-            vagas_filtradas, descartes = filtrar_vagas(vagas, perfil.regras)
+            # No perfil Brasil, só notificamos vagas com data verificável dos
+            # últimos 3 dias. Fontes sem data ou com formato ambíguo não podem
+            # ser tratadas como recentes por suposição. O perfil internacional
+            # preserva sua regra de recência atual.
+            vagas_para_avaliar = vagas
+            if perfil.chave == "brasil":
+                vagas_para_avaliar, descartadas_recencia = filtrar_publicadas_recentemente(
+                    vagas, dias_maximos=3
+                )
+                if descartadas_recencia:
+                    logger.info(
+                        f"[{perfil.nome}] {descartadas_recencia} vaga(s) descartada(s) "
+                        "por data ausente, ambígua, futura ou anterior aos últimos 3 dias."
+                    )
+            vagas_filtradas, descartes = filtrar_vagas(vagas_para_avaliar, perfil.regras)
             descartes_escopo_ciclo.update(descartes)
 
             ids_aprovadas = {v.id for v in vagas_filtradas}
             titulo_barrou_em_cidade.extend(
                 f"{v.titulo} — {v.empresa} ({v.local})"
-                for v in vagas
+                for v in vagas_para_avaliar
                 if v.id not in ids_aprovadas and v.rejeitada_so_pelo_cargo(perfil.regras)
             )
 
@@ -334,7 +348,7 @@ def ciclo_de_busca(perfil: Perfil):
             vagas_secundarias = []
             if perfil.eixo_secundario_ativo and perfil.regras_eixo_secundario is not None:
                 ids_filtradas = {v.id for v in vagas_filtradas}
-                candidatas, descartes_secundario = filtrar_vagas(vagas, perfil.regras_eixo_secundario)
+                candidatas, descartes_secundario = filtrar_vagas(vagas_para_avaliar, perfil.regras_eixo_secundario)
                 descartes_escopo_ciclo.update(descartes_secundario)
                 vagas_secundarias = [
                     v for v in candidatas

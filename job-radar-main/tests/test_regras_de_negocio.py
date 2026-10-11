@@ -3,9 +3,12 @@ para contratação no Brasil. Híbridas, presenciais e mercados internacionais
 são rejeitados."""
 
 import pytest
+from datetime import date
+
 from core.config import LIMIAR_RELEVANCIA_MINIMA, MERCADOS_REMOTO_ACEITOS
 from core.job import Job
 from core.perfis import PERFIL_BR
+from utils.filtro import filtrar_publicadas_recentemente, idade_publicacao_em_dias
 
 
 def vaga(titulo, local="Remote - Brazil", modalidade="Remoto"):
@@ -54,6 +57,19 @@ def test_cargos_genericos_nao_entram():
     assert not vaga("Analista de Dados").combina_com(PERFIL_BR.regras)
 
 
+@pytest.mark.parametrize("titulo", [
+    "CRM Analyst (Hybrid)",
+    "Analista de CRM Híbrida",
+    "Analista de CRM Semi-presencial",
+    "CRM Analyst - In-person",
+    "CRM Analyst - Office-based",
+])
+def test_titulo_contradiz_modalidade_remota(titulo):
+    vaga_remota = vaga(titulo, local="Remote - Brazil", modalidade="Remoto")
+    assert vaga_remota.modalidade in {"Híbrido", "Presencial"}
+    assert not vaga_remota.combina_com(PERFIL_BR.regras)
+
+
 def test_minimo_de_relevancia_alto():
     assert LIMIAR_RELEVANCIA_MINIMA >= 7
 
@@ -61,3 +77,36 @@ def test_minimo_de_relevancia_alto():
 def test_so_brasil_e_remoto():
     assert MERCADOS_REMOTO_ACEITOS == ["Brasil"]
     assert PERFIL_BR.regras.cidades == ["Remoto"]
+
+
+@pytest.mark.parametrize(
+    "publicado, esperado",
+    [
+        ("2026-10-11", 0),
+        ("2026-10-09", 2),
+        ("2026-10-07", 4),
+        ("há 2 dias", 2),
+        ("2 days ago", 2),
+        ("há 12 horas", 0),
+        ("12 hours ago", 0),
+        ("hoje", 0),
+        ("ontem", 1),
+        ("", None),
+        ("Publicada em 11/08", None),
+    ],
+)
+def test_idade_publicacao_com_data_fixa(publicado, esperado):
+    assert idade_publicacao_em_dias(publicado, hoje=date(2026, 10, 11)) == esperado
+
+
+def test_recencia_descarta_data_ausente_antiga_futura_e_ambigua():
+    vagas = [
+        vaga("Analista de CRM Júnior", modalidade="Remoto"),
+        Job("CRM Analyst", "Teste", "Brasil", "https://exemplo.com/old", "Teste", publicado_em="2026-10-07", modalidade="Remoto"),
+        Job("CRM Analyst", "Teste", "Brasil", "https://exemplo.com/future", "Teste", publicado_em="2026-10-12", modalidade="Remoto"),
+        Job("CRM Analyst", "Teste", "Brasil", "https://exemplo.com/recent", "Teste", publicado_em="2026-10-09", modalidade="Remoto"),
+        Job("CRM Analyst", "Teste", "Brasil", "https://exemplo.com/ambiguous", "Teste", publicado_em="Publicada em 11/08", modalidade="Remoto"),
+    ]
+    recentes, descartadas = filtrar_publicadas_recentemente(vagas, dias_maximos=3, hoje=date(2026, 10, 11))
+    assert [v.link for v in recentes] == ["https://exemplo.com/recent"]
+    assert descartadas == 4
