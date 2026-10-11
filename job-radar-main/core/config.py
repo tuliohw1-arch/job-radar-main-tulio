@@ -50,7 +50,6 @@ KEYWORDS_CUSTOMER_SUCCESS_CX = [
 # Mantemos títulos de função específicos para evitar que palavras genéricas
 # como "atendimento" tragam vagas de áreas sem relação com o objetivo.
 KEYWORDS_RELACIONAMENTO_ATENDIMENTO = []
-]
 
 # Todos os títulos inequívocos aceitos pelo filtro.
 KEYWORDS_CARGO_FORTE += (
@@ -201,7 +200,6 @@ TERMOS_POR_CICLO = 10
 # cada cidade e uma busca a mais por termo no LinkedIn. Sai de 11 cidades
 # para 8 — menos requisicao por ciclo E cobrindo Manaus, que faltava.
 CIDADES = ["Remoto"]
-]
 
 # MEDIDO: "Data Analyst @ Lisboa" e "Analista de Datos @ Madrid" reprovavam
 # na localização, não no cargo — CIDADES acima é whitelist só de cidade
