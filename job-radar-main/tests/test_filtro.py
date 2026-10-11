@@ -165,7 +165,7 @@ CASOS_COMBINA_COM = [
     # cargo batendo.
     ("cidade-fora-da-lista-barrada", "Analista de CRM", "Nova York", "Presencial", PERFIL_BR, False),
     ("cargo-fora-do-escopo-barrado", "Vendedor Externo", "Recife, PE", "Presencial", PERFIL_BR, False),
-    ("cargo-forte-cidade-aceita-passa", "Analista de CRM Pleno", "Recife, PE", "Presencial", PERFIL_BR, True),
+    ("vaga-presencial-rejeitada", "Analista de CRM Pleno", "Recife, PE", "Presencial", PERFIL_BR, False),
     ("cargo-fora-do-escopo-dados-barrado", "Analista de Dados", "Recife, PE", "Presencial", PERFIL_BR, False),
 ]
 
