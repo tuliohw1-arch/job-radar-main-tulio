@@ -62,8 +62,6 @@ KEYWORDS_CARGO_AMBIGUO = [
     "Customer Experience",
     "Experiência do Cliente",
     "Experiencia do Cliente",
-    "Relacionamento com Cliente",
-    "Relacionamento com o Cliente",
 ]
 
 # Qualificadores usados exclusivamente junto aos cargos ambíguos acima.
