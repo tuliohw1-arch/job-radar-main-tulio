@@ -175,7 +175,7 @@ class LinkedInScraper(BaseScraper):
         total_mercados = len(self.locations)
         logger.info(
             f"[LinkedIn] {len(vagas)} vaga(s) encontrada(s) no total "
-            f"({total_mercados} mercado(s), somente remoto): {', '.join(self.locations)}
+            f"({total_mercados} mercado(s), somente remoto): {', '.join(self.locations)}"
         )
         return vagas
 
