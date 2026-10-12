@@ -180,6 +180,8 @@ class SolidesScraper(BaseScraper):
     def __init__(self, termos_busca: list[str]):
         self.termos_busca = termos_busca
         self._api_indisponivel = False
+        self._session = requests.Session()
+        self._sessao_inicializada = False
 
     def buscar_vagas(self) -> list[Job]:
         vagas: list[Job] = []
@@ -199,7 +201,15 @@ class SolidesScraper(BaseScraper):
 
         for pagina in range(1, MAX_PAGINAS + 1):
             try:
-                resposta = requests.get(
+                if not self._sessao_inicializada:
+                    portal = self._session.get(
+                        "https://vagas.solides.com.br/",
+                        timeout=TIMEOUT,
+                        headers={"User-Agent": UA, "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7"},
+                    )
+                    self._sessao_inicializada = True
+                    logger.info(f"[Solides] Portal público inicializado (HTTP {portal.status_code}).")
+                resposta = self._session.get(
                     URL_API,
                     params={"title": termo, "take": TAKE, "page": pagina},
                     timeout=TIMEOUT,
