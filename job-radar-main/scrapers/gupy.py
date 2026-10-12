@@ -31,7 +31,7 @@ logger = get_logger()
 #
 # O QUE NAO MUDOU, de proposito: o Job montado, o filtro, a pontuacao, a
 # deduplicacao e o formato do log. So a camada de busca foi trocada.
-URL_API = "https://employability-portal.gupy.io/api/v1/jobs"
+URLS_API = ("https://portal.gupy.io/api/v1/jobs", "https://employability-portal.gupy.io/api/v1/jobs")
 
 # A API aceita limit alto (testado com 100). 100 por requisicao cobre a
 # maioria dos termos numa chamada so.
@@ -116,6 +116,8 @@ class GupyScraper(BaseScraper):
     def __init__(self, termos_busca: list[str]):
         self.termos_busca = termos_busca
         self._api_indisponivel = False
+        self._url_api_ativa = URLS_API[0]
+        self._session = requests.Session()
 
     def buscar_vagas(self) -> list[Job]:
         vagas: list[Job] = []
@@ -135,8 +137,8 @@ class GupyScraper(BaseScraper):
 
         while offset < MAX_VAGAS_POR_TERMO:
             try:
-                resposta = requests.get(
-                    URL_API,
+                resposta = self._session.get(
+                    self._url_api_ativa,
                     params={"jobName": termo, "limit": LIMITE_POR_PAGINA, "offset": offset},
                     timeout=TIMEOUT,
                     headers={"User-Agent": UA, "Accept": "application/json, text/plain, */*", "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7", "Referer": "https://portal.gupy.io/", "Origin": "https://portal.gupy.io"},
@@ -151,7 +153,10 @@ class GupyScraper(BaseScraper):
                     f"[Gupy] Status {resposta.status_code} em '{termo}' (offset {offset}); "
                     f"URL={resposta.url}; corpo={detalhe!r}. Não é busca vazia."
                 )
-                if resposta.status_code in (403, 404):
+                if resposta.status_code == 404 and self._url_api_ativa == URLS_API[0]:
+                    self._url_api_ativa = URLS_API[1]
+                    logger.warning("[Gupy] Host atual retornou 404; tentando host legado no próximo termo.")
+                elif resposta.status_code in (403, 404):
                     self._api_indisponivel = True
                 break
 
