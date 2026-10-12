@@ -242,3 +242,30 @@ def test_prioritario_fora_da_lista_de_busca_e_ignorado(metadados):
 def test_todos_prioritarios_e_nenhum_rodizio(metadados):
     perfil = _PerfilFalso(["a", "b"], por_ciclo=3, prioritarios=["a", "b"])
     assert main._proximo_bloco_termos(perfil) == ["a", "b"]
+
+
+# ------------------------------------------------------- HEARTBEAT
+
+def test_heartbeat_so_marca_data_quando_telegram_confirma_envio(monkeypatch):
+    """Uma falha transitória do Telegram não pode silenciar o heartbeat pelo dia inteiro."""
+    estado = {"metadados": {}, "resultados": [False, True], "tentativas": 0}
+
+    monkeypatch.setattr(main, "obter_metadado", lambda chave: estado["metadados"].get(chave))
+
+    def definir(chave, valor):
+        estado["metadados"][chave] = valor
+
+    def enviar(_texto):
+        estado["tentativas"] += 1
+        return estado["resultados"].pop(0)
+
+    monkeypatch.setattr(main, "definir_metadado", definir)
+    monkeypatch.setattr(main, "enviar_mensagem", enviar)
+
+    main._enviar_heartbeat_diario(PERFIL_BR, 0, [], 3)
+    assert estado["tentativas"] == 1
+    assert f"heartbeat_ultimo_dia_{PERFIL_BR.chave}" not in estado["metadados"]
+
+    main._enviar_heartbeat_diario(PERFIL_BR, 0, [], 3)
+    assert estado["tentativas"] == 2
+    assert estado["metadados"][f"heartbeat_ultimo_dia_{PERFIL_BR.chave}"]
