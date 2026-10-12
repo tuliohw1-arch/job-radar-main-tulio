@@ -1,5 +1,8 @@
 from datetime import date, datetime, timezone
+import json
+import re
 import time
+from urllib.parse import quote
 
 import requests
 
@@ -100,6 +103,59 @@ _MODALIDADE = {
     "home office": "Remoto",
     "homeoffice": "Remoto",
 }
+
+
+def extrair_vagas_html(html: str) -> list[dict]:
+    """Extrai objetos de vagas do stream Flight do Next.js sem depender do DOM.
+
+    O HTML público da Sólides incorpora segmentos como
+    self.__next_f.push([1, "..."]). Cada segmento é uma string JavaScript
+    escapada; json.loads decodifica os escapes antes de procurar os objetos.
+    Retorna somente objetos com campos mínimos reconhecíveis como vaga.
+    """
+    segmentos = re.findall(
+        r"self\\.__next_f\\.push\\(\\[1,\\s*(\"(?:\\\\.|[^\"\\\\])*\")\\s*\\]\\)",
+        html,
+    )
+    partes = []
+    for segmento in segmentos:
+        try:
+            partes.append(json.loads(segmento))
+        except (json.JSONDecodeError, TypeError):
+            continue
+    payload = "\\n".join(partes)
+    if not payload:
+        return []
+
+    decoder = json.JSONDecoder()
+    vagas = []
+    vistos = set()
+    # IDs/títulos aparecem em objetos JSON completos no stream decodificado.
+    for match in re.finditer(r'"id"\\s*:\\s*(\\d+)\\s*,\\s*"title"\\s*:', payload):
+        inicio = payload.rfind("{", 0, match.start())
+        if inicio < 0:
+            continue
+        try:
+            objeto, _ = decoder.raw_decode(payload[inicio:])
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(objeto, dict):
+            continue
+        if not objeto.get("title") or not objeto.get("redirectLink"):
+            continue
+        if "jobType" not in objeto and "homeOffice" not in objeto:
+            continue
+        identidade = str(objeto.get("id"))
+        if identidade not in vistos:
+            vistos.add(identidade)
+            vagas.append(objeto)
+    return vagas
+
+
+def url_busca_publica(termo: str) -> str:
+    """Constrói a rota pública observada no portal para o termo de busca."""
+    slug = re.sub(r"[^a-z0-9]+", "-", termo.lower()).strip("-")
+    return "https://vagas.solides.com.br/vagas/" + quote(slug, safe="-")
 
 
 def pagina_toda_antiga(itens: list[dict], dias: int, hoje: date | None = None) -> bool:
@@ -226,6 +282,37 @@ class SolidesScraper(BaseScraper):
                     f"(página {pagina}); URL={resposta.url}; corpo={detalhe!r}. "
                     "Não é busca vazia."
                 )
+                if pagina == 1 and resposta.status_code in (403, 404):
+                    try:
+                        pagina_publica = self._session.get(
+                            url_busca_publica(termo),
+                            timeout=TIMEOUT,
+                            headers={
+                                "User-Agent": UA,
+                                "Accept": "text/html,application/xhtml+xml",
+                                "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+                                "Referer": "https://vagas.solides.com.br/",
+                            },
+                        )
+                        if pagina_publica.status_code == 200:
+                            itens_html = extrair_vagas_html(pagina_publica.text)
+                            logger.info(
+                                f"[Solides] HTML público '{termo}': "
+                                f"{len(itens_html)} vaga(s) extraída(s)."
+                            )
+                            for item in itens_html:
+                                job = montar_job(item)
+                                if job is not None:
+                                    vagas.append(job)
+                            return vagas
+                        logger.warning(
+                            f"[Solides] Fallback HTML retornou HTTP "
+                            f"{pagina_publica.status_code} para '{termo}'."
+                        )
+                    except Exception as erro:
+                        logger.warning(
+                            f"[Solides] Fallback HTML falhou para '{termo}': {erro}"
+                        )
                 if resposta.status_code in (403, 404):
                     self._api_indisponivel = True
                 break
