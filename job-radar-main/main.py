@@ -140,14 +140,22 @@ def _enviar_heartbeat_diario(
     else:
         status = "todas as fontes ok"
 
-    enviar_mensagem(
+    enviado = enviar_mensagem(
         f"💓 <b>JobRadar {perfil.nome} ativo</b>\n\n"
         f"Confirmação diária: o ciclo rodou agora ({hora_brasilia}, {status}). "
         f"{total_novas} vaga(s) nova(s) neste ciclo.\n\n"
         "Se essa mensagem parar de chegar, o workflow parou de rodar — "
         "não que faltou vaga."
     )
-    definir_metadado(chave, hoje)
+    if enviado:
+        definir_metadado(chave, hoje)
+    else:
+        # Não registrar uma tentativa como envio: se o Telegram falhar
+        # transitoriamente, o próximo ciclo precisa tentar novamente.
+        logger.warning(
+            f"[{perfil.nome}] Falha ao enviar heartbeat diário; "
+            "nova tentativa será feita no próximo ciclo."
+        )
 
 
 def _enviar_digest_diario(perfil: Perfil):
