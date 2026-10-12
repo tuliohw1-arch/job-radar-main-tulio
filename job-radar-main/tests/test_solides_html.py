@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 from scrapers.solides import extrair_vagas_html, url_busca_publica
 
@@ -42,3 +43,30 @@ def test_descarta_objeto_sem_link_de_candidatura():
 def test_slug_da_busca_publica():
     assert url_busca_publica("Analista de CRM") == "https://vagas.solides.com.br/vagas/analista-de-crm"
     assert url_busca_publica("Customer Success / CX") == "https://vagas.solides.com.br/vagas/customer-success-cx"
+
+
+def test_extrai_vagas_do_html_real_da_solides():
+    fixture = Path(__file__).parent / "fixtures" / "solides_busca_real.html"
+    vagas = extrair_vagas_html(fixture.read_text(encoding="utf-8"))
+
+    # A captura pública fornecida contém nove registros reconhecíveis;
+    # a modalidade é filtrada pela lógica existente depois de montar_job.
+    assert len(vagas) == 9
+    assert all(vaga.get("redirectLink") for vaga in vagas)
+    assert all(vaga.get("title") for vaga in vagas)
+
+
+def test_deduplica_vagas_com_mesmo_id():
+    vaga = {
+        "id": 123,
+        "title": "Analista de CRM",
+        "redirectLink": "https://empresa.solides.jobs/vacancies/123",
+        "jobType": "remoto",
+    }
+    item = json.dumps(vaga, ensure_ascii=False)
+    html = _html_com_payload('1:{"data":[' + item + "," + item + "]}")
+
+    vagas = extrair_vagas_html(html)
+
+    assert len(vagas) == 1
+    assert vagas[0]["id"] == 123
