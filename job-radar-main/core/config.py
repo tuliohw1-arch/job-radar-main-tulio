@@ -31,9 +31,15 @@ KEYWORDS_CARGO_FORTE = [
 ]
 
 # 2) Segunda prioridade: Customer Success e Experiência do Cliente.
+# Inclui variantes Jr/Junior e títulos usados por empresas SaaS; a checagem
+# continua sendo pelo título e o filtro remoto/recência permanece obrigatório.
 KEYWORDS_CUSTOMER_SUCCESS_CX = [
     "Analista de Customer Success",
     "Customer Success Analyst",
+    "Customer Success Jr",
+    "Customer Success Junior",
+    "Customer Success Associate",
+    "Associate Customer Success Manager",
     "Especialista em Customer Success",
     "Customer Success Specialist",
     "Customer Success Manager",
@@ -42,14 +48,39 @@ KEYWORDS_CUSTOMER_SUCCESS_CX = [
     "Analista de Experiência do Cliente",
     "Analista de Experiencia do Cliente",
     "Customer Experience Analyst",
+    "Customer Experience Jr",
+    "Customer Experience Associate",
     "CX Analyst",
     "Analista de CX",
 ]
 
-# 3) Terceira opção: relacionamento e atendimento ao cliente.
-# Mantemos títulos de função específicos para evitar que palavras genéricas
-# como "atendimento" tragam vagas de áreas sem relação com o objetivo.
-KEYWORDS_RELACIONAMENTO_ATENDIMENTO = []
+# 3) Terceira prioridade: operações e etapas próximas do ciclo do cliente.
+# São portas de entrada plausíveis para CRM/RevOps: onboarding, implantação,
+# operações de CS e suporte B2B/SaaS. Não incluímos "atendimento" genérico,
+# vendas, SDR ou suporte técnico amplo, para conter falso positivo.
+KEYWORDS_OPERACOES_CLIENTE = [
+    "Analista de Onboarding",
+    "Customer Onboarding Specialist",
+    "Customer Onboarding Analyst",
+    "Customer Onboarding Associate",
+    "Analista de Implantação",
+    "Implementation Analyst",
+    "Implementation Specialist",
+    "Customer Operations Analyst",
+    "Customer Operations Associate",
+    "Customer Success Operations",
+    "CS Operations Analyst",
+    "CS Ops Analyst",
+    "Analista de Operações de Customer Success",
+    "Analista de Operações de Clientes",
+    "Customer Support Analyst Jr",
+    "Customer Support Analyst Junior",
+    "Analista de Suporte ao Cliente Jr",
+    "Analista de Suporte ao Cliente Junior",
+]
+
+# 4) CRM adjacente: retenção, jornada e automação de marketing.
+KEYWORDS_RELACIONAMENTO_ATENDIMENTO = KEYWORDS_OPERACOES_CLIENTE
 
 # Todos os títulos inequívocos aceitos pelo filtro.
 KEYWORDS_CARGO_FORTE += (
@@ -90,6 +121,11 @@ PRIORIDADES_CARGO = {
         "Analista de CRM", "CRM Analyst", "Especialista em CRM",
         "Especialista de CRM", "CRM Specialist", "Assistente de CRM",
         "Consultor de CRM", "Consultor CRM", "CRM Consultant",
+        "Analista de CRM Operations", "CRM Operations Analyst",
+        "CRM Ops Analyst", "CRM Operations Specialist",
+        "Analista de Automação de Marketing", "Marketing Automation Analyst",
+        "Marketing Automation Specialist", "Lifecycle Marketing Analyst",
+        "Retention Marketing Analyst",
     ]},
     **{cargo: 2 for cargo in KEYWORDS_CUSTOMER_SUCCESS_CX},
     **{cargo: 1 for cargo in KEYWORDS_RELACIONAMENTO_ATENDIMENTO},
@@ -113,11 +149,23 @@ KEYWORDS = KEYWORDS_CARGO_FORTE + KEYWORDS_CARGO_AMBIGUO
 # acontecer — toda keyword nova em KEYWORDS já vira busca também.
 TERMOS_CARGO_EXTRA = [
     "crm",
+    "crm operations",
+    "marketing automation",
+    "lifecycle marketing",
+    "retention marketing",
     "customer success",
     "customer experience",
+    "customer onboarding",
+    "onboarding",
+    "implementation analyst",
+    "analista de implantação",
+    "customer operations",
+    "customer success operations",
+    "cs ops",
     "experiência do cliente",
     "relacionamento com cliente",
-    "atendimento ao cliente",
+    "sucesso do cliente",
+    "suporte ao cliente jr",
 ]
 
 TERMOS_CARGO = sorted(set(k.lower() for k in KEYWORDS) | set(TERMOS_CARGO_EXTRA))
@@ -160,6 +208,9 @@ TERMOS_PRIORITARIOS = [
     "customer success",
     "customer experience",
     "experiência do cliente",
+    "customer onboarding",
+    "customer operations",
+    "marketing automation",
 ]
 
 # Medido: os TERMOS_BUSCA inteiros (hoje 42) rodando em TODO ciclo é o que
