@@ -70,3 +70,46 @@ def test_deduplica_vagas_com_mesmo_id():
 
     assert len(vagas) == 1
     assert vagas[0]["id"] == 123
+
+
+def test_fallback_html_quando_api_retorna_403(monkeypatch):
+    import scrapers.solides as solides
+
+    vaga = {
+        "id": 321,
+        "title": "Analista de CRM",
+        "companyName": "Empresa Teste",
+        "redirectLink": "https://empresa.solides.jobs/vacancies/321",
+        "jobType": "remoto",
+        "homeOffice": True,
+        "createdAt": "2026-10-09",
+        "city": {"name": "Brasil"},
+        "state": {"code": "BR"},
+    }
+    html = _html_com_payload('1:{"data":[' + json.dumps(vaga) + "]}")
+
+    class Resposta:
+        def __init__(self, status_code, text="", url="https://example.test"):
+            self.status_code = status_code
+            self.text = text
+            self.url = url
+
+    class SessaoFalsa:
+        def __init__(self):
+            self.respostas = [
+                Resposta(403, "bloqueado", solides.URL_API),
+                Resposta(200, html, "https://vagas.solides.com.br/vagas/analista-de-crm"),
+            ]
+
+        def get(self, *args, **kwargs):
+            return self.respostas.pop(0)
+
+    monkeypatch.setattr(solides.requests, "Session", SessaoFalsa)
+    scraper = solides.SolidesScraper(["Analista de CRM"])
+    scraper._sessao_inicializada = True
+
+    vagas = scraper._buscar_termo("Analista de CRM")
+
+    assert len(vagas) == 1
+    assert vagas[0].titulo == "Analista de CRM"
+    assert vagas[0].site == "Solides"
