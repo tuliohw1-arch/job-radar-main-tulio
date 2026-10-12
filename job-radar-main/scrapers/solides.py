@@ -179,10 +179,14 @@ class SolidesScraper(BaseScraper):
 
     def __init__(self, termos_busca: list[str]):
         self.termos_busca = termos_busca
+        self._api_indisponivel = False
 
     def buscar_vagas(self) -> list[Job]:
         vagas: list[Job] = []
         for termo in self.termos_busca:
+            if self._api_indisponivel:
+                logger.warning("[Solides] Busca interrompida: endpoint indisponível; evitando repetir a mesma falha em cada termo.")
+                break
             vagas.extend(self._buscar_termo(termo))
         logger.info(f"[Solides] {len(vagas)} vaga(s) encontrada(s) no total")
         return vagas
@@ -199,17 +203,21 @@ class SolidesScraper(BaseScraper):
                     URL_API,
                     params={"title": termo, "take": TAKE, "page": pagina},
                     timeout=TIMEOUT,
-                    headers={"User-Agent": UA, "Accept": "application/json"},
+                    headers={"User-Agent": UA, "Accept": "application/json, text/plain, */*", "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7", "Referer": "https://vagas.solides.com.br/", "Origin": "https://vagas.solides.com.br"},
                 )
             except Exception as erro:
                 logger.error(f"[Solides] Erro ao buscar '{termo}' (página {pagina}): {erro}")
                 break
 
             if resposta.status_code != 200:
+                detalhe = " ".join((resposta.text or "").split())[:240]
                 logger.warning(
                     f"[Solides] Status {resposta.status_code} em '{termo}' "
-                    f"(página {pagina}) — resposta inesperada da API, não é busca vazia."
+                    f"(página {pagina}); URL={resposta.url}; corpo={detalhe!r}. "
+                    "Não é busca vazia."
                 )
+                if resposta.status_code in (403, 404):
+                    self._api_indisponivel = True
                 break
 
             try:
