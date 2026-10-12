@@ -115,10 +115,14 @@ class GupyScraper(BaseScraper):
 
     def __init__(self, termos_busca: list[str]):
         self.termos_busca = termos_busca
+        self._api_indisponivel = False
 
     def buscar_vagas(self) -> list[Job]:
         vagas: list[Job] = []
         for termo in self.termos_busca:
+            if self._api_indisponivel:
+                logger.warning("[Gupy] Busca interrompida: endpoint indisponível; evitando repetir a mesma falha em cada termo.")
+                break
             vagas.extend(self._buscar_termo(termo))
         logger.info(f"[Gupy] {len(vagas)} vaga(s) encontrada(s) no total")
         return vagas
@@ -135,17 +139,20 @@ class GupyScraper(BaseScraper):
                     URL_API,
                     params={"jobName": termo, "limit": LIMITE_POR_PAGINA, "offset": offset},
                     timeout=TIMEOUT,
-                    headers={"User-Agent": UA},
+                    headers={"User-Agent": UA, "Accept": "application/json, text/plain, */*", "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7", "Referer": "https://portal.gupy.io/", "Origin": "https://portal.gupy.io"},
                 )
             except Exception as erro:
                 logger.error(f"[Gupy] Erro ao buscar '{termo}' (offset {offset}): {erro}")
                 break
 
             if resposta.status_code != 200:
+                detalhe = " ".join((resposta.text or "").split())[:240]
                 logger.warning(
-                    f"[Gupy] Status {resposta.status_code} em '{termo}' (offset {offset}) "
-                    "— resposta inesperada da API, não é busca vazia."
+                    f"[Gupy] Status {resposta.status_code} em '{termo}' (offset {offset}); "
+                    f"URL={resposta.url}; corpo={detalhe!r}. Não é busca vazia."
                 )
+                if resposta.status_code in (403, 404):
+                    self._api_indisponivel = True
                 break
 
             try:
