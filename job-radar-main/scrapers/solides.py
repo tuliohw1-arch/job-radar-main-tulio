@@ -114,7 +114,7 @@ def extrair_vagas_html(html: str) -> list[dict]:
     Retorna somente objetos com campos mínimos reconhecíveis como vaga.
     """
     segmentos = re.findall(
-        r"self\\.__next_f\\.push\\(\\[1,\\s*(\"(?:\\\\.|[^\"\\\\])*\")\\s*\\]\\)",
+        r"self\.__next_f\.push\(\[1,\s*(\"(?:\\.|[^\"\\])*\")\s*\]\)",
         html,
     )
     partes = []
@@ -123,7 +123,7 @@ def extrair_vagas_html(html: str) -> list[dict]:
             partes.append(json.loads(segmento))
         except (json.JSONDecodeError, TypeError):
             continue
-    payload = "\\n".join(partes)
+    payload = "\n".join(partes)
     if not payload:
         return []
 
@@ -131,7 +131,7 @@ def extrair_vagas_html(html: str) -> list[dict]:
     vagas = []
     vistos = set()
     # IDs/títulos aparecem em objetos JSON completos no stream decodificado.
-    for match in re.finditer(r'"id"\\s*:\\s*(\\d+)\\s*,\\s*"title"\\s*:', payload):
+    for match in re.finditer(r'"id"\s*:\s*(\d+)\s*,\s*"title"\s*:', payload):
         inicio = payload.rfind("{", 0, match.start())
         if inicio < 0:
             continue
