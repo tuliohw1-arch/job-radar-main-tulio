@@ -31,7 +31,7 @@ logger = get_logger()
 #
 # O QUE NAO MUDOU, de proposito: o Job montado, o filtro, a pontuacao, a
 # deduplicacao e o formato do log. So a camada de busca foi trocada.
-URLS_API = ("https://portal.gupy.io/api/v1/jobs", "https://employability-portal.gupy.io/api/v1/jobs")
+URLS_API = ("https://portal.gupy.io/api/job-search/jobs", "https://employability-portal.gupy.io/api/v1/jobs")
 
 # A API aceita limit alto (testado com 100). 100 por requisicao cobre a
 # maioria dos termos numa chamada so.
