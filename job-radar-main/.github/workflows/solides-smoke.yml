@@ -1,0 +1,53 @@
+name: Smoke test Sólides
+
+on:
+  push:
+    paths:
+      - "job-radar-main/.github/workflows/solides-smoke.yml"
+      - "job-radar-main/scrapers/solides.py"
+      - "job-radar-main/core/job.py"
+      - "job-radar-main/scrapers/base.py"
+
+permissions:
+  contents: read
+
+jobs:
+  solides-live-smoke:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: job-radar-main
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Testar Sólides em tempo real sem notificações
+        run: |
+          python - <<'PY'
+          from scrapers.solides import SolidesScraper
+          from core.logger import get_logger
+
+          logger = get_logger()
+          termos = ["Analista de CRM"]
+          scraper = SolidesScraper(termos)
+          vagas = scraper.buscar_vagas()
+
+          print("\n=== RESUMO DO SMOKE TEST SÓLIDES ===")
+          print(f"Termos testados: {termos}")
+          print(f"Vagas retornadas pelo scraper: {len(vagas)}")
+          for vaga in vagas[:10]:
+              print(
+                  f"- título={vaga.titulo!r}; empresa={vaga.empresa!r}; "
+                  f"local={vaga.local!r}; modalidade={vaga.modalidade!r}; "
+                  f"publicado_em={vaga.publicado_em!r}; link={vaga.link!r}"
+              )
+          print("=== FIM DO RESUMO ===")
+          PY

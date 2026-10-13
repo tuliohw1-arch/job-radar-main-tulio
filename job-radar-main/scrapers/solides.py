@@ -1,5 +1,8 @@
 from datetime import date, datetime, timezone
+import json
+import re
 import time
+from urllib.parse import quote, urlsplit
 
 import requests
 
@@ -102,6 +105,59 @@ _MODALIDADE = {
 }
 
 
+def extrair_vagas_html(html: str) -> list[dict]:
+    """Extrai objetos de vagas do stream Flight do Next.js sem depender do DOM.
+
+    O HTML público da Sólides incorpora segmentos como
+    self.__next_f.push([1, "..."]). Cada segmento é uma string JavaScript
+    escapada; json.loads decodifica os escapes antes de procurar os objetos.
+    Retorna somente objetos com campos mínimos reconhecíveis como vaga.
+    """
+    segmentos = re.findall(
+        r"self\.__next_f\.push\(\[1,\s*(\"(?:\\.|[^\"\\])*\")\s*\]\)",
+        html,
+    )
+    partes = []
+    for segmento in segmentos:
+        try:
+            partes.append(json.loads(segmento))
+        except (json.JSONDecodeError, TypeError):
+            continue
+    payload = "\n".join(partes)
+    if not payload:
+        return []
+
+    decoder = json.JSONDecoder()
+    vagas = []
+    vistos = set()
+    # IDs/títulos aparecem em objetos JSON completos no stream decodificado.
+    for match in re.finditer(r'"id"\s*:\s*(\d+)\s*,\s*"title"\s*:', payload):
+        inicio = payload.rfind("{", 0, match.start())
+        if inicio < 0:
+            continue
+        try:
+            objeto, _ = decoder.raw_decode(payload[inicio:])
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(objeto, dict):
+            continue
+        if not objeto.get("title") or not objeto.get("redirectLink"):
+            continue
+        if "jobType" not in objeto and "homeOffice" not in objeto:
+            continue
+        identidade = str(objeto.get("id"))
+        if identidade not in vistos:
+            vistos.add(identidade)
+            vagas.append(objeto)
+    return vagas
+
+
+def url_busca_publica(termo: str) -> str:
+    """Constrói a rota pública observada no portal para o termo de busca."""
+    slug = re.sub(r"[^a-z0-9]+", "-", termo.lower()).strip("-")
+    return "https://vagas.solides.com.br/vagas/" + quote(slug, safe="-")
+
+
 def pagina_toda_antiga(itens: list[dict], dias: int, hoje: date | None = None) -> bool:
     """A vaga MAIS NOVA desta pagina ja passou do limite de idade?
 
@@ -163,6 +219,31 @@ def montar_job(vaga: dict) -> Job | None:
     if not titulo or not link:
         return None
 
+    # Não propagar URLs evidentemente quebradas do payload público.
+    # Ex.: https://empresa./vacancies/123 — o hostname não contém domínio
+    # registrável/TLD e não é um link de candidatura utilizável.
+    try:
+        parsed_link = urlsplit(link)
+        hostname = (parsed_link.hostname or "").rstrip(".")
+        if (
+            parsed_link.scheme not in ("http", "https")
+            or not parsed_link.netloc
+            or "." not in hostname
+            or hostname.startswith(".")
+            or hostname.endswith(".")
+        ):
+            logger.warning(
+                f"[Solides] Vaga descartada por link inválido: "
+                f"título={titulo!r}, link={link!r}."
+            )
+            return None
+    except ValueError:
+        logger.warning(
+            f"[Solides] Vaga descartada por URL inválida: "
+            f"título={titulo!r}, link={link!r}."
+        )
+        return None
+
     return Job(
         titulo=titulo,
         empresa=(vaga.get("companyName") or "Não informado").strip(),
@@ -180,6 +261,8 @@ class SolidesScraper(BaseScraper):
     def __init__(self, termos_busca: list[str]):
         self.termos_busca = termos_busca
         self._api_indisponivel = False
+        self._session = requests.Session()
+        self._sessao_inicializada = False
 
     def buscar_vagas(self) -> list[Job]:
         vagas: list[Job] = []
@@ -199,7 +282,15 @@ class SolidesScraper(BaseScraper):
 
         for pagina in range(1, MAX_PAGINAS + 1):
             try:
-                resposta = requests.get(
+                if not self._sessao_inicializada:
+                    portal = self._session.get(
+                        "https://vagas.solides.com.br/",
+                        timeout=TIMEOUT,
+                        headers={"User-Agent": UA, "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7"},
+                    )
+                    self._sessao_inicializada = True
+                    logger.info(f"[Solides] Portal público inicializado (HTTP {portal.status_code}).")
+                resposta = self._session.get(
                     URL_API,
                     params={"title": termo, "take": TAKE, "page": pagina},
                     timeout=TIMEOUT,
@@ -216,6 +307,44 @@ class SolidesScraper(BaseScraper):
                     f"(página {pagina}); URL={resposta.url}; corpo={detalhe!r}. "
                     "Não é busca vazia."
                 )
+                if pagina == 1 and resposta.status_code in (403, 404):
+                    try:
+                        pagina_publica = self._session.get(
+                            url_busca_publica(termo),
+                            timeout=TIMEOUT,
+                            headers={
+                                "User-Agent": UA,
+                                "Accept": "text/html,application/xhtml+xml",
+                                "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+                                "Referer": "https://vagas.solides.com.br/",
+                            },
+                        )
+                        if pagina_publica.status_code == 200:
+                            itens_html = extrair_vagas_html(pagina_publica.text)
+                            logger.info(
+                                f"[Solides] HTML público '{termo}': "
+                                f"{len(itens_html)} vaga(s) extraída(s)."
+                            )
+                            validas = 0
+                            for item in itens_html:
+                                job = montar_job(item)
+                                if job is not None:
+                                    vagas.append(job)
+                                    validas += 1
+                            if itens_html and validas == 0:
+                                logger.warning(
+                                    f"[Solides] Fallback encontrou {len(itens_html)} "
+                                    "registro(s), mas nenhum tinha link de candidatura válido."
+                                )
+                            return vagas
+                        logger.warning(
+                            f"[Solides] Fallback HTML retornou HTTP "
+                            f"{pagina_publica.status_code} para '{termo}'."
+                        )
+                    except Exception as erro:
+                        logger.warning(
+                            f"[Solides] Fallback HTML falhou para '{termo}': {erro}"
+                        )
                 if resposta.status_code in (403, 404):
                     self._api_indisponivel = True
                 break
