@@ -7,6 +7,7 @@ from core.config import (
     PRIORIDADES_CARGO,
     TERMOS_BUSCA,
     TERMOS_PRIORITARIOS,
+    _grupo_do_termo,
 )
 
 
@@ -60,3 +61,13 @@ def test_familias_principais_sao_buscadas_em_todo_ciclo():
 
 def test_recencia_brasil_permanece_em_cinco_dias():
     assert DIAS_MAXIMOS_PUBLICACAO == 5
+
+
+
+def test_rodizio_distribui_termos_na_proporcao_40_40_20():
+    primeiros = TERMOS_BUSCA[:5]
+    assert [_grupo_do_termo(termo) for termo in primeiros] == [
+        "A", "A", "B", "B", "C"
+    ]
+    # O intercalamento não pode perder nem duplicar termos.
+    assert len(TERMOS_BUSCA) == len(set(TERMOS_BUSCA))
