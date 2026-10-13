@@ -330,6 +330,7 @@ def ciclo_de_busca(perfil: Perfil):
                 scrapers_com_problema.append(nome)
                 continue
 
+            _marcar_fonte_baixa_frequencia_concluida(perfil, scraper)
             total_brutas += len(vagas)
             # No perfil Brasil, só notificamos vagas com data verificável dos
             # últimos 5 dias. Fontes sem data ou com formato ambíguo não podem
