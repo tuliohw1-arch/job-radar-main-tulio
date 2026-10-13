@@ -255,14 +255,6 @@ PRIORIDADES_CARGO = {
     **{cargo: 2 for cargo in KEYWORDS_CUSTOMER_SUCCESS_CX},
     **{cargo: 1 for cargo in KEYWORDS_RELACIONAMENTO_ATENDIMENTO},
 }
-# Prioridades por grupo: A > B > C. Isso afeta a relevância/ranking,
-# sem permitir que score compense modalidade ou data inválida.
-PRIORIDADES_CARGO.update({
-    **{cargo: 3 for cargo in GRUPOS_CARGOS["A"]["keywords"]},
-    **{cargo: 2 for cargo in GRUPOS_CARGOS["B"]["keywords"]},
-    **{cargo: 1 for cargo in GRUPOS_CARGOS["C"]["keywords"]},
-})
-
 # Taxonomia de busca do perfil Brasil. Os pesos expressam prioridade operacional,
 # não probabilidade estatística de contratação. O filtro remoto e a data
 # verificável continuam sendo critérios eliminatórios independentes.
@@ -297,6 +289,14 @@ GRUPOS_CARGOS = {
     },
 }
 assert sum(grupo["peso"] for grupo in GRUPOS_CARGOS.values()) == 100
+
+# Prioridades por grupo: A > B > C. Isso afeta a relevância/ranking,
+# sem permitir que score compense modalidade ou data inválida.
+PRIORIDADES_CARGO.update({
+    **{cargo: 3 for cargo in GRUPOS_CARGOS["A"]["keywords"]},
+    **{cargo: 2 for cargo in GRUPOS_CARGOS["B"]["keywords"]},
+    **{cargo: 1 for cargo in GRUPOS_CARGOS["C"]["keywords"]},
+})
 
 KEYWORDS = KEYWORDS_CARGO_FORTE + KEYWORDS_CARGO_AMBIGUO
 
