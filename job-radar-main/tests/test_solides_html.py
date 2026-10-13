@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from scrapers.solides import extrair_vagas_html, url_busca_publica
+from scrapers.solides import extrair_vagas_html, montar_job, url_busca_publica
 
 
 def _html_com_payload(payload: str) -> str:
@@ -113,3 +113,35 @@ def test_fallback_html_quando_api_retorna_403(monkeypatch):
     assert len(vagas) == 1
     assert vagas[0].titulo == "Analista de CRM"
     assert vagas[0].site == "Solides"
+
+
+
+def test_montar_job_descarta_link_com_dominio_incompleto():
+    vaga = {
+        "id": 987,
+        "title": "Analista de CRM",
+        "companyName": "Empresa Teste",
+        "redirectLink": "https://empresa./vacancies/987?origem=portal",
+        "jobType": "remoto",
+        "homeOffice": True,
+        "createdAt": "2026-10-09",
+    }
+
+    assert montar_job(vaga) is None
+
+
+def test_montar_job_aceita_link_https_valido():
+    vaga = {
+        "id": 988,
+        "title": "Analista de CRM",
+        "companyName": "Empresa Teste",
+        "redirectLink": "https://empresa.com.br/vacancies/988",
+        "jobType": "remoto",
+        "homeOffice": True,
+        "createdAt": "2026-10-09",
+    }
+
+    job = montar_job(vaga)
+
+    assert job is not None
+    assert job.link == "https://empresa.com.br/vacancies/988"
