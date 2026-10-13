@@ -244,3 +244,23 @@ def test_publicacao_antiga(nome, publicado_em, esperado):
         publicado_em=publicado_em,
     )
     assert job.publicacao_antiga == esperado
+
+
+def test_pipeline_brasil_usa_cinco_dias_na_chamada_real():
+    """Impede divergência entre o padrão do filtro e a chamada de produção."""
+    import ast
+    import inspect
+    import main
+
+    arvore = ast.parse(inspect.getsource(main.ciclo_de_busca))
+    chamadas = [
+        no for no in ast.walk(arvore)
+        if isinstance(no, ast.Call)
+        and isinstance(no.func, ast.Name)
+        and no.func.id == "filtrar_publicadas_recentemente"
+    ]
+    assert len(chamadas) == 1
+    dias = [kw.value for kw in chamadas[0].keywords if kw.arg == "dias_maximos"]
+    assert len(dias) == 1
+    assert isinstance(dias[0], ast.Constant)
+    assert dias[0].value == 5
