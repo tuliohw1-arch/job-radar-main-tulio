@@ -326,7 +326,7 @@ def ciclo_de_busca(perfil: Perfil):
             vagas_para_avaliar = vagas
             if perfil.chave == "brasil":
                 vagas_para_avaliar, descartadas_recencia = filtrar_publicadas_recentemente(
-                    vagas, dias_maximos=3
+                    vagas, dias_maximos=5
                 )
                 if descartadas_recencia:
                     logger.info(
