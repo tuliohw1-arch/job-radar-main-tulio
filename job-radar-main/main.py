@@ -24,7 +24,7 @@ from notifier.telegram import (
     notificar_vaga_exploratoria,
     processar_feedback_pendente,
 )
-from core.perfis import FREQUENCIA_ALTA, PERFIS, Perfil
+from core.perfis import FREQUENCIA_ALTA, FREQUENCIA_BAIXA, PERFIS, Perfil
 from utils.filtro import filtrar_publicadas_recentemente, filtrar_vagas
 from core.logger import get_logger
 
