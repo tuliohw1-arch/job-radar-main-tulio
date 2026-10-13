@@ -110,3 +110,34 @@ def test_recencia_descarta_data_ausente_antiga_futura_e_ambigua():
     recentes, descartadas = filtrar_publicadas_recentemente(vagas, dias_maximos=3, hoje=date(2026, 10, 11))
     assert [v.link for v in recentes] == ["https://exemplo.com/recent"]
     assert descartadas == 4
+
+
+@pytest.mark.parametrize("titulo", [
+    "Business Operations Analyst Jr",
+    "Analista de Operações Comerciais Jr",
+    "Sales Operations Analyst Jr",
+    "Revenue Operations Analyst Jr",
+    "RevOps Analyst",
+    "Marketing Operations Analyst Jr",
+    "Analista de Automação de Marketing Jr",
+    "Implementation Analyst Jr",
+    "SaaS Implementation Specialist",
+    "Product Support Specialist Jr",
+    "Application Support Analyst Jr",
+    "Analista de Suporte a Sistemas Jr",
+])
+def test_aceita_funcoes_ponte_para_crm(titulo):
+    assert vaga(titulo).combina_com(PERFIL_BR.regras)
+
+
+@pytest.mark.parametrize("titulo", [
+    "Operations Analyst",
+    "Business Analyst",
+    "Customer Support",
+    "Customer Support Analyst",
+    "Help Desk Analyst",
+    "IT Support Technician",
+    "Software Developer",
+])
+def test_nao_abre_para_cargos_genericos_fora_do_foco(titulo):
+    assert not vaga(titulo).combina_com(PERFIL_BR.regras)
