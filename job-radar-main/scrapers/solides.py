@@ -2,7 +2,7 @@ from datetime import date, datetime, timezone
 import json
 import re
 import time
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 import requests
 
@@ -219,6 +219,31 @@ def montar_job(vaga: dict) -> Job | None:
     if not titulo or not link:
         return None
 
+    # Não propagar URLs evidentemente quebradas do payload público.
+    # Ex.: https://empresa./vacancies/123 — o hostname não contém domínio
+    # registrável/TLD e não é um link de candidatura utilizável.
+    try:
+        parsed_link = urlsplit(link)
+        hostname = (parsed_link.hostname or "").rstrip(".")
+        if (
+            parsed_link.scheme not in ("http", "https")
+            or not parsed_link.netloc
+            or "." not in hostname
+            or hostname.startswith(".")
+            or hostname.endswith(".")
+        ):
+            logger.warning(
+                f"[Solides] Vaga descartada por link inválido: "
+                f"título={titulo!r}, link={link!r}."
+            )
+            return None
+    except ValueError:
+        logger.warning(
+            f"[Solides] Vaga descartada por URL inválida: "
+            f"título={titulo!r}, link={link!r}."
+        )
+        return None
+
     return Job(
         titulo=titulo,
         empresa=(vaga.get("companyName") or "Não informado").strip(),
@@ -300,10 +325,17 @@ class SolidesScraper(BaseScraper):
                                 f"[Solides] HTML público '{termo}': "
                                 f"{len(itens_html)} vaga(s) extraída(s)."
                             )
+                            validas = 0
                             for item in itens_html:
                                 job = montar_job(item)
                                 if job is not None:
                                     vagas.append(job)
+                                    validas += 1
+                            if itens_html and validas == 0:
+                                logger.warning(
+                                    f"[Solides] Fallback encontrou {len(itens_html)} "
+                                    "registro(s), mas nenhum tinha link de candidatura válido."
+                                )
                             return vagas
                         logger.warning(
                             f"[Solides] Fallback HTML retornou HTTP "
