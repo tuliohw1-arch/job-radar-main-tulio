@@ -144,12 +144,83 @@ KEYWORDS_OPERACOES_CLIENTE = [
     "Analista de Suporte ao Cliente Junior",
 ]
 
-# 4) CRM adjacente: retenção, jornada e automação de marketing.
+# 4) Operações de negócio/comercial que funcionam como ponte para CRM e RevOps.
+# Títulos explícitos para evitar que "Operations Analyst" genérico vire ruído.
+KEYWORDS_OPERACOES_NEGOCIO = [
+    "Analista de Business Operations Jr",
+    "Business Operations Analyst Jr",
+    "Junior Business Operations Analyst",
+    "Business Operations Associate",
+    "Analista de Operações de Negócios Jr",
+    "Analista de Operações de Negocios Jr",
+    "Analista de Operações Comerciais Jr",
+    "Analista de Operacoes Comerciais Jr",
+    "Sales Operations Analyst Jr",
+    "Junior Sales Operations Analyst",
+    "Sales Operations Associate",
+    "Analista de Sales Operations Jr",
+    "Revenue Operations Analyst Jr",
+    "Junior Revenue Operations Analyst",
+    "Revenue Operations Associate",
+    "RevOps Analyst",
+    "RevOps Analyst Jr",
+    "Analista de RevOps Jr",
+    "Analista de Operações de Receita Jr",
+    "Analista de Operacoes de Receita Jr",
+    "Sales Enablement Analyst Jr",
+]
+
+# 5) Operações de marketing e implantação de software — próximos de CRM/SaaS.
+KEYWORDS_MARKETING_IMPLANTACAO = [
+    "Marketing Operations Analyst Jr",
+    "Junior Marketing Operations Analyst",
+    "Marketing Operations Associate",
+    "Analista de Marketing Operations Jr",
+    "Analista de Operações de Marketing Jr",
+    "Analista de Operacoes de Marketing Jr",
+    "Analista de Automação de Marketing Jr",
+    "Analista de Automacao de Marketing Jr",
+    "Marketing Automation Assistant",
+    "Lifecycle Marketing Assistant",
+    "Analista de Implantação de Sistemas Jr",
+    "Analista de Implantacao de Sistemas Jr",
+    "Implementation Analyst Jr",
+    "Junior Implementation Analyst",
+    "Implementation Specialist Jr",
+    "SaaS Implementation Specialist",
+    "Customer Onboarding Specialist Jr",
+    "Customer Onboarding Coordinator",
+]
+
+# 6) Suporte de produto/SaaS como porta de entrada controlada.
+# Não aceitar "Customer Support" ou "Help Desk" genérico isoladamente.
+KEYWORDS_SUPORTE_SAAS = [
+    "Product Support Specialist",
+    "Product Support Specialist Jr",
+    "Product Support Analyst",
+    "Product Support Analyst Jr",
+    "SaaS Support Specialist",
+    "SaaS Support Analyst",
+    "Technical Support Analyst SaaS",
+    "Technical Support Specialist SaaS",
+    "Application Support Analyst Jr",
+    "Application Support Specialist Jr",
+    "Analista de Suporte a Sistemas Jr",
+    "Analista de Suporte de Sistemas Jr",
+    "Analista de Suporte SaaS Jr",
+    "Especialista de Suporte ao Produto Jr",
+]
+
+# 7) CRM adjacente: retenção, jornada e automação de marketing.
 KEYWORDS_RELACIONAMENTO_ATENDIMENTO = KEYWORDS_OPERACOES_CLIENTE
 
 # Todos os títulos inequívocos aceitos pelo filtro.
 KEYWORDS_CARGO_FORTE += (
-    KEYWORDS_CUSTOMER_SUCCESS_CX + KEYWORDS_RELACIONAMENTO_ATENDIMENTO
+    KEYWORDS_CUSTOMER_SUCCESS_CX
+    + KEYWORDS_RELACIONAMENTO_ATENDIMENTO
+    + KEYWORDS_OPERACOES_NEGOCIO
+    + KEYWORDS_MARKETING_IMPLANTACAO
+    + KEYWORDS_SUPORTE_SAAS
 )
 
 # Títulos ambíguos só contam se também tiverem um qualificador da área.
@@ -193,6 +264,9 @@ PRIORIDADES_CARGO = {
         "Retention Marketing Analyst",
     ]},
     **{cargo: 2 for cargo in KEYWORDS_CUSTOMER_SUCCESS_CX},
+    **{cargo: 2 for cargo in KEYWORDS_OPERACOES_NEGOCIO},
+    **{cargo: 2 for cargo in KEYWORDS_MARKETING_IMPLANTACAO},
+    **{cargo: 1 for cargo in KEYWORDS_SUPORTE_SAAS},
     **{cargo: 1 for cargo in KEYWORDS_RELACIONAMENTO_ATENDIMENTO},
 }
 
