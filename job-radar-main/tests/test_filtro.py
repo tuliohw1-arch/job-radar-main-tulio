@@ -262,5 +262,15 @@ def test_pipeline_brasil_usa_cinco_dias_na_chamada_real():
     assert len(chamadas) == 1
     dias = [kw.value for kw in chamadas[0].keywords if kw.arg == "dias_maximos"]
     assert len(dias) == 1
-    assert isinstance(dias[0], ast.Constant)
-    assert dias[0].value == 5
+    from core.config import DIAS_MAXIMOS_PUBLICACAO
+
+    # Aceita a configuração centralizada, mas garante que o limite de
+    # produção continue sendo exatamente cinco dias.
+    assert DIAS_MAXIMOS_PUBLICACAO == 5
+    assert (
+        isinstance(dias[0], ast.Name)
+        and dias[0].id == "DIAS_MAXIMOS_PUBLICACAO"
+    ) or (
+        isinstance(dias[0], ast.Constant)
+        and dias[0].value == 5
+    )
