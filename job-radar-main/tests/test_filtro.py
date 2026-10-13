@@ -135,6 +135,28 @@ CASOS_ESCOPO = [
     CASOS_ESCOPO,
     ids=[c[0] for c in CASOS_ESCOPO],
 )
+def test_recencia_padrao_aceita_ate_cinco_dias_e_rejeita_seis():
+    from datetime import date, timedelta
+    from utils.filtro import filtrar_publicadas_recentemente
+    from core.job import Job
+
+    hoje = date(2026, 10, 13)
+    def vaga(data):
+        return Job(
+            titulo="Analista de CRM Jr", empresa="Empresa", local="Remoto - Brasil",
+            link=f"https://example.com/{data}", site="Teste", modalidade="Remoto",
+            publicado_em=data.isoformat(),
+        )
+
+    vagas = [vaga(hoje - timedelta(days=dias)) for dias in (0, 5, 6)]
+    aprovadas, descartadas = filtrar_publicadas_recentemente(vagas, hoje=hoje)
+    assert [v.publicado_em for v in aprovadas] == [
+        (hoje - timedelta(days=0)).isoformat(),
+        (hoje - timedelta(days=5)).isoformat(),
+    ]
+    assert descartadas == 1
+
+
 def test_extrair_escopo_remoto(nome, local, modalidade, esperado):
     assert extrair_escopo_remoto(local, modalidade) == esperado
 
