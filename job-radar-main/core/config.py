@@ -144,12 +144,72 @@ KEYWORDS_OPERACOES_CLIENTE = [
     "Analista de Suporte ao Cliente Junior",
 ]
 
+# Famílias adicionais para ampliar a transição sem abrir para cargos genéricos.
+# Grupo B — ponte para CRM: operações comerciais e receita.
+KEYWORDS_OPERACOES_COMERCIAIS = [
+    "Business Operations Analyst",
+    "Business Operations Analyst Jr",
+    "Junior Business Operations Analyst",
+    "Business Operations Associate",
+    "Analista de Operações de Negócios",
+    "Analista de Operações de Negocio",
+    "Analista de Business Operations",
+    "Sales Operations Analyst",
+    "Sales Operations Analyst Jr",
+    "Junior Sales Operations Analyst",
+    "Sales Operations Associate",
+    "Sales Ops Analyst",
+    "Sales Ops Specialist",
+    "Analista de Sales Operations",
+    "Analista de Operações Comerciais",
+    "Revenue Operations Analyst",
+    "Revenue Operations Analyst Jr",
+    "Junior Revenue Operations Analyst",
+    "Revenue Operations Associate",
+    "RevOps Analyst",
+    "RevOps Analyst Jr",
+    "RevOps Associate",
+    "Analista de RevOps",
+    "Analista de Operações de Receita",
+    "Revenue Enablement Analyst",
+    "SaaS Implementation Analyst",
+    "SaaS Onboarding Specialist",
+]
+
+# Grupo C — entrada complementar: operações de marketing e suporte SaaS.
+KEYWORDS_MARKETING_OPERATIONS = [
+    "Marketing Operations Analyst",
+    "Marketing Operations Specialist",
+    "Marketing Operations Associate",
+    "Marketing Ops Analyst",
+    "Marketing Ops Specialist",
+    "Analista de Marketing Operations",
+    "Analista de Operações de Marketing",
+    "Marketing Automation Analyst",
+    "Marketing Automation Specialist",
+    "Marketing Automation Associate",
+    "CRM Automation Analyst",
+    "HubSpot Operations Specialist",
+    "HubSpot Administrator Jr",
+    "Salesforce Administrator Jr",
+    "SaaS Support Analyst",
+    "SaaS Support Specialist",
+    "Technical Support Specialist SaaS",
+    "Customer Support Operations Analyst",
+    "Customer Support Operations Specialist",
+    "Analista de Suporte SaaS",
+    "Analista de Suporte a Sistemas SaaS",
+]
+
 # 4) CRM adjacente: retenção, jornada e automação de marketing.
 KEYWORDS_RELACIONAMENTO_ATENDIMENTO = KEYWORDS_OPERACOES_CLIENTE
 
 # Todos os títulos inequívocos aceitos pelo filtro.
 KEYWORDS_CARGO_FORTE += (
-    KEYWORDS_CUSTOMER_SUCCESS_CX + KEYWORDS_RELACIONAMENTO_ATENDIMENTO
+    KEYWORDS_CUSTOMER_SUCCESS_CX
+    + KEYWORDS_RELACIONAMENTO_ATENDIMENTO
+    + KEYWORDS_OPERACOES_COMERCIAIS
+    + KEYWORDS_MARKETING_OPERATIONS
 )
 
 # Títulos ambíguos só contam se também tiverem um qualificador da área.
@@ -195,6 +255,48 @@ PRIORIDADES_CARGO = {
     **{cargo: 2 for cargo in KEYWORDS_CUSTOMER_SUCCESS_CX},
     **{cargo: 1 for cargo in KEYWORDS_RELACIONAMENTO_ATENDIMENTO},
 }
+# Prioridades por grupo: A > B > C. Isso afeta a relevância/ranking,
+# sem permitir que score compense modalidade ou data inválida.
+PRIORIDADES_CARGO.update({
+    **{cargo: 3 for cargo in GRUPOS_CARGOS["A"]["keywords"]},
+    **{cargo: 2 for cargo in GRUPOS_CARGOS["B"]["keywords"]},
+    **{cargo: 1 for cargo in GRUPOS_CARGOS["C"]["keywords"]},
+})
+
+# Taxonomia de busca do perfil Brasil. Os pesos expressam prioridade operacional,
+# não probabilidade estatística de contratação. O filtro remoto e a data
+# verificável continuam sendo critérios eliminatórios independentes.
+GRUPOS_CARGOS = {
+    "A": {
+        "nome": "Objetivo direto",
+        "peso": 40,
+        "keywords": [
+            "CRM Operations Analyst", "CRM Ops Analyst", "Analista de CRM Operations",
+            "CRM Analyst", "CRM Analyst Jr", "Junior CRM Analyst",
+            "CS Operations Analyst", "CS Ops Analyst", "Customer Success Operations",
+            "Analista de Operações de Customer Success",
+        ],
+    },
+    "B": {
+        "nome": "Ponte para CRM",
+        "peso": 40,
+        "keywords": KEYWORDS_OPERACOES_COMERCIAIS + [
+            "Analista de Implantação", "Implementation Analyst",
+            "Implementation Specialist", "Customer Onboarding Specialist",
+            "Customer Onboarding Analyst", "Customer Operations Analyst",
+            "Customer Operations Associate",
+        ],
+    },
+    "C": {
+        "nome": "Entrada complementar",
+        "peso": 20,
+        "keywords": KEYWORDS_MARKETING_OPERATIONS + [
+            "Marketing Automation Analyst", "Marketing Automation Specialist",
+            "Analista de Automação de Marketing", "Marketing Automation Associate",
+        ],
+    },
+}
+assert sum(grupo["peso"] for grupo in GRUPOS_CARGOS.values()) == 100
 
 KEYWORDS = KEYWORDS_CARGO_FORTE + KEYWORDS_CARGO_AMBIGUO
 
@@ -258,6 +360,18 @@ TERMOS_CARGO_EXTRA = [
     "analista de sucesso do cliente junior",
     "analista jr de customer success",
     "cx jr",
+    "crm operations",
+    "cs ops",
+    "business operations",
+    "sales operations",
+    "sales ops",
+    "revenue operations",
+    "revops",
+    "marketing operations",
+    "marketing ops",
+    "saas support",
+    "saas onboarding",
+    "implementation analyst",
     "analista cx jr",
     "analista cx junior",
     "analista de cx jr",
@@ -321,6 +435,12 @@ TERMOS_PRIORITARIOS = [
     "analista de cx jr",
     "experiência do cliente",
     "customer onboarding",
+    "crm operations",
+    "cs ops",
+    "business operations",
+    "sales operations",
+    "revops",
+    "marketing operations",
 ]
 
 # Medido: os TERMOS_BUSCA inteiros (hoje 42) rodando em TODO ciclo é o que
@@ -333,6 +453,9 @@ TERMOS_PRIORITARIOS = [
 # desacopla custo por ciclo de tamanho da lista: dobrar TERMOS_BUSCA dobra
 # quantos ciclos até cobrir tudo de novo, não o custo de cada ciclo.
 TERMOS_POR_CICLO = 10
+
+# Recência estrita do perfil Brasil: data original comprovada, não data de coleta.
+DIAS_MAXIMOS_PUBLICACAO = 5
 
 # Onde vaga HIBRIDA ou PRESENCIAL e aceita (mais "Remoto", que nao e
 # cidade e sim a porta de entrada da regra de modalidade remota — ver
