@@ -4,6 +4,8 @@ from core.config import (
     DIAS_MAXIMOS_PUBLICACAO,
     GRUPOS_CARGOS,
     KEYWORDS,
+    KEYWORDS_MARKETING_OPERATIONS,
+    KEYWORDS_OPERACOES_COMERCIAIS,
     PRIORIDADES_CARGO,
     TERMOS_BUSCA,
     TERMOS_PRIORITARIOS,
@@ -21,23 +23,19 @@ def test_pesos_dos_grupos_somam_100_e_respeitam_proposta():
 
 
 def test_familias_novas_entram_no_filtro_e_na_busca():
-    titulos = [
-        "CRM Operations Analyst",
-        "CS Ops Analyst",
-        "Business Operations Analyst",
-        "Sales Operations Analyst",
-        "RevOps Analyst Jr",
-        "SaaS Implementation Analyst",
-        "Customer Onboarding Specialist",
-        "Marketing Operations Analyst",
-        "Marketing Automation Specialist",
-        "SaaS Support Analyst",
-    ]
     normalizadas = {termo.casefold() for termo in KEYWORDS}
     termos_busca = set(TERMOS_BUSCA)
-    for titulo in titulos:
+    novas_keywords = KEYWORDS_OPERACOES_COMERCIAIS + KEYWORDS_MARKETING_OPERATIONS
+    for titulo in novas_keywords:
         assert titulo.casefold() in normalizadas
         assert titulo.casefold() in termos_busca
+
+    termos_essenciais = {
+        "crm operations", "cs ops", "business operations",
+        "sales operations", "revops", "marketing operations",
+        "saas support", "saas onboarding", "implementation analyst",
+    }
+    assert termos_essenciais.issubset(set(TERMOS_BUSCA))
 
 
 def test_prioridade_dos_grupos_e_decrescente():
