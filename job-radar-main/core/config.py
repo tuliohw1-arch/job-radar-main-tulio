@@ -412,7 +412,7 @@ def _grupo_do_termo(termo: str) -> str:
         "salesforce administrator",
     )):
         return "C"
-    if "crm" in t or "cs ops" in t or "customer success operations" in t:
+    if "crm" in t or "cs ops" in t or "cs operations" in t or "customer success operations" in t:
         return "A"
     return "B"
 
