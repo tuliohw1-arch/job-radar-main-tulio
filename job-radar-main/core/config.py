@@ -311,7 +311,6 @@ TERMOS_PRIORITARIOS = [
     "analista de crm júnior",
     "analista de crm junior",
     "analista crm jr",
-    "crm analyst jr",
     "analista jr de crm",
     "crm",
     "customer success",
@@ -322,8 +321,6 @@ TERMOS_PRIORITARIOS = [
     "analista de cx jr",
     "experiência do cliente",
     "customer onboarding",
-    "customer operations",
-    "marketing automation",
 ]
 
 # Medido: os TERMOS_BUSCA inteiros (hoje 42) rodando em TODO ciclo é o que
