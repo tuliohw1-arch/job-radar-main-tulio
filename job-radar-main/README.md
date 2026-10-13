@@ -7,7 +7,7 @@
 ![Playwright](https://img.shields.io/badge/Playwright-Scraping-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-Banco%20versionado-07405E?style=for-the-badge&logo=sqlite&logoColor=white)
 ![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-Cron-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)
-![Tests](https://img.shields.io/badge/testes-481%20passing-success?style=for-the-badge)
+![Tests](https://img.shields.io/badge/testes-486%20esperados-informational?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-em%20produção-success?style=for-the-badge)
 
 **Autora:** Liliam Kezia Oliveira Souza
@@ -112,9 +112,11 @@ Vaga de alta relevância chega na hora, com nível, data de publicação e link.
 O filtro existe para uma busca específica, e as regras estão explícitas em `core/config.py`:
 
 - **Brasil remoto:** somente vagas explicitamente remotas e com escopo de contratação no Brasil.
+- **Recência:** no perfil Brasil, a data original deve ser verificável e ter no máximo 5 dias; data de coleta nunca substitui data de publicação.
 - **Híbrido e presencial:** sempre rejeitados, inclusive em Belo Horizonte.
 - **Internacional:** o workflow não executa o perfil internacional; vagas com escopo explícito fora do Brasil ou sem escopo confirmado são rejeitadas.
-- **Compatibilidade:** CRM/CRM Operations é prioridade; Customer Success e experiência do cliente entram apenas em cargos específicos. Vagas abaixo de 7/10 são descartadas, não enviadas ao digest.
+- **Taxonomia de carreira (Brasil):** grupos A — CRM/CRM Operations/CS Ops (40%), B — Business Operations/Sales Ops/RevOps/implantação/onboarding (40%) e C — Marketing Operations/automação/suporte SaaS (20%). Os pesos são uma proposta de priorização, não probabilidades de contratação.
+- **Compatibilidade:** CRM/CRM Operations é prioridade; CS Ops e operações adjacentes entram por títulos específicos. Vagas abaixo de 7/10 são descartadas, não enviadas ao digest.
 
 Cidade homônima é tratada: `Campina Grande do Sul, Paraná` e `Fortaleza de Minas, Minas Gerais` são barradas pela conferência de UF, que entende tanto a sigla quanto o estado por extenso.
 
