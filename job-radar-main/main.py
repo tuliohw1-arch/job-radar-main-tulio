@@ -320,7 +320,7 @@ def ciclo_de_busca(perfil: Perfil):
 
             total_brutas += len(vagas)
             # No perfil Brasil, só notificamos vagas com data verificável dos
-            # últimos 3 dias. Fontes sem data ou com formato ambíguo não podem
+            # últimos 5 dias. Fontes sem data ou com formato ambíguo não podem
             # ser tratadas como recentes por suposição. O perfil internacional
             # preserva sua regra de recência atual.
             vagas_para_avaliar = vagas
@@ -331,7 +331,7 @@ def ciclo_de_busca(perfil: Perfil):
                 if descartadas_recencia:
                     logger.info(
                         f"[{perfil.nome}] {descartadas_recencia} vaga(s) descartada(s) "
-                        "por data ausente, ambígua, futura ou anterior aos últimos 3 dias."
+                        "por data ausente, ambígua, futura ou anterior aos últimos 5 dias."
                     )
             vagas_filtradas, descartes = filtrar_vagas(vagas_para_avaliar, perfil.regras)
             descartes_escopo_ciclo.update(descartes)
