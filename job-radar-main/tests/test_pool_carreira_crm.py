@@ -25,9 +25,22 @@ def vaga(titulo: str, local: str = "Remoto - Brasil", modalidade: str = "Remoto"
 
 def test_novos_cargos_proximos_de_crm_sao_aceitos():
     titulos = [
+        "Analista de CRM Júnior",
+        "Analista de CRM Junior",
+        "Analista Jr de CRM",
+        "CRM Jr",
+        "Customer Success Analyst Jr",
+        "Customer Success Associate Jr",
+        "Assistente de Customer Success",
+        "Analista de Sucesso do Cliente Jr",
         "Customer Success Jr",
         "Customer Success Junior",
         "Analista de Sucesso do Cliente Júnior",
+        "Customer Experience Analyst Jr",
+        "Analista de Customer Experience Jr",
+        "Analista de Experiência do Cliente Jr",
+        "CX Jr",
+        "Analista de CX Junior",
         "Customer Experience Jr",
         "Customer Experience Associate",
         "Customer Onboarding Specialist",
