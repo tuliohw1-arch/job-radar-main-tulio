@@ -6,7 +6,13 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime, timezone
 
-from core.config import DIGEST_HORA_UTC, INTERVALO_MINUTOS, LIMIAR_DIGEST_IMEDIATO, LIMIAR_RELEVANCIA_MINIMA
+from core.config import (
+    DIAS_MAXIMOS_PUBLICACAO,
+    DIGEST_HORA_UTC,
+    INTERVALO_MINUTOS,
+    LIMIAR_DIGEST_IMEDIATO,
+    LIMIAR_RELEVANCIA_MINIMA,
+)
 from database.database import (
     BancoVazioSuspeito,
     definir_metadado,
@@ -339,7 +345,7 @@ def ciclo_de_busca(perfil: Perfil):
             vagas_para_avaliar = vagas
             if perfil.chave == "brasil":
                 vagas_para_avaliar, descartadas_recencia = filtrar_publicadas_recentemente(
-                    vagas, dias_maximos=5
+                    vagas, dias_maximos=DIAS_MAXIMOS_PUBLICACAO
                 )
                 if descartadas_recencia:
                     logger.info(
