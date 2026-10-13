@@ -31,37 +31,49 @@ from core.logger import get_logger
 logger = get_logger()
 
 
-def _fontes_baixa_frequencia_ja_rodaram_hoje(perfil: Perfil) -> bool:
-    chave = f"baixa_frequencia_ultimo_dia_{perfil.chave}"
-    return obter_metadado(chave) == date.today().isoformat()
+def _chave_fonte_baixa_frequencia(perfil: Perfil, nome_scraper: str) -> str:
+    """Estado diário por fonte, para uma falha não bloquear as outras."""
+    return f"baixa_frequencia_ultimo_dia_{perfil.chave}_{nome_scraper}"
 
 
-# Não é mais uma lista fixa construída uma vez: os scrapers recebem só o
-# BLOCO de termos do ciclo atual (ver _proximo_bloco_termos), e a lista de
-# QUAIS fontes entram também varia por ciclo (fonte de baixa frequência só
-# entra na primeira execução do dia) — então precisam ser (re)criados a
-# cada ciclo, não guardados numa constante de módulo. Cada perfil tem sua
-# própria chave de metadados (sufixo perfil.chave), pra rodar dois perfis
-# na mesma execução sem um pisar na cadência do outro.
 def _construir_scrapers(perfil: Perfil, termos_busca: list[str]):
-    rodar_baixa_frequencia = not _fontes_baixa_frequencia_ja_rodaram_hoje(perfil)
+    """Inclui fontes de baixa frequência até cada uma concluir uma coleta.
 
-    scrapers = [
-        definicao.classe(termos_busca=termos_busca, **definicao.kwargs_extras)
-        for definicao in perfil.definicao_scrapers
-        if definicao.frequencia == FREQUENCIA_ALTA or rodar_baixa_frequencia
-    ]
+    O estado é por scraper: uma fonte que falha não fica marcada como feita
+    apenas porque o ciclo começou, e as fontes que funcionaram não repetem
+    trabalho desnecessário nos ciclos seguintes do mesmo dia.
+    """
+    hoje = date.today().isoformat()
+    scrapers = []
+    for definicao in perfil.definicao_scrapers:
+        if definicao.frequencia == FREQUENCIA_ALTA:
+            scrapers.append(
+                definicao.classe(termos_busca=termos_busca, **definicao.kwargs_extras)
+            )
+            continue
 
-    if rodar_baixa_frequencia:
-        # Marca ANTES de rodar (não depois): mesmo que uma fonte de baixa
-        # frequência falhe nesse ciclo, ela "rodou" no sentido de já ter
-        # sido tentada hoje — não deve ser tentada de novo no ciclo
-        # seguinte só porque deu erro. Falha individual já é tratada e
-        # logada normalmente em ciclo_de_busca(), como qualquer scraper.
-        definir_metadado(f"baixa_frequencia_ultimo_dia_{perfil.chave}", date.today().isoformat())
+        chave = _chave_fonte_baixa_frequencia(perfil, definicao.classe.__name__)
+        if obter_metadado(chave) == hoje:
+            continue
+        scrapers.append(
+            definicao.classe(termos_busca=termos_busca, **definicao.kwargs_extras)
+        )
 
     return scrapers
 
+
+def _marcar_fonte_baixa_frequencia_concluida(perfil: Perfil, scraper) -> None:
+    """Marca só após a fonte devolver resultados sem exceção."""
+    nome = scraper.__class__.__name__
+    definicao = next(
+        (d for d in perfil.definicao_scrapers
+         if d.classe.__name__ == nome and d.frequencia == FREQUENCIA_BAIXA),
+        None,
+    )
+    if definicao is None:
+        return
+    chave = _chave_fonte_baixa_frequencia(perfil, nome)
+    definir_metadado(chave, date.today().isoformat())
 
 def _proximo_bloco_termos(perfil: Perfil) -> list[str]:
     """Termos deste ciclo: os PRIORITÁRIOS (todo ciclo, fora do rodízio) mais
