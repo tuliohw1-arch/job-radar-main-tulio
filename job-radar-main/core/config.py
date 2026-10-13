@@ -400,7 +400,47 @@ TERMOS_CARGO = sorted(set(k.lower() for k in KEYWORDS) | set(TERMOS_CARGO_EXTRA)
 # igual a um termo de cargo.
 TERMOS_FERRAMENTA = []
 
-TERMOS_BUSCA = TERMOS_CARGO + TERMOS_FERRAMENTA
+def _grupo_do_termo(termo: str) -> str:
+    """Classifica termos de busca para distribuir o rodízio entre as famílias."""
+    t = termo.casefold()
+    # Complementares vêm primeiro para "CRM Automation" não ser confundido
+    # com o núcleo só por conter CRM no nome.
+    if any(sinal in t for sinal in (
+        "marketing operations", "marketing ops", "marketing automation",
+        "marketing automation", "automação", "automacao", "automation",
+        "saas support", "suporte saas", "hubspot operations",
+        "salesforce administrator",
+    )):
+        return "C"
+    if "crm" in t or "cs ops" in t or "customer success operations" in t:
+        return "A"
+    return "B"
+
+
+def _ordenar_termos_ponderados(termos: list[str]) -> list[str]:
+    """Intercala o rodízio em proporção 40/40/20 (padrão A,A,B,B,C).
+
+    A ordem mantém cada termo uma única vez. Se uma família esgotar os seus
+    termos antes das demais, as filas restantes continuam sem duplicação.
+    """
+    filas = {
+        grupo: [termo for termo in termos if _grupo_do_termo(termo) == grupo]
+        for grupo in ("A", "B", "C")
+    }
+    ordem = []
+    padrao = ("A", "A", "B", "B", "C")
+    while any(filas.values()):
+        avancou = False
+        for grupo in padrao:
+            if filas[grupo]:
+                ordem.append(filas[grupo].pop(0))
+                avancou = True
+        if not avancou:
+            break
+    return ordem
+
+
+TERMOS_BUSCA = _ordenar_termos_ponderados(TERMOS_CARGO + TERMOS_FERRAMENTA)
 
 # Termos que rodam em TODO ciclo, fora do rodízio.
 #
