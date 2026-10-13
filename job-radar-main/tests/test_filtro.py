@@ -135,6 +135,10 @@ CASOS_ESCOPO = [
     CASOS_ESCOPO,
     ids=[c[0] for c in CASOS_ESCOPO],
 )
+def test_extrair_escopo_remoto(nome, local, modalidade, esperado):
+    assert extrair_escopo_remoto(local, modalidade) == esperado
+
+
 def test_recencia_padrao_aceita_ate_cinco_dias_e_rejeita_seis():
     from datetime import date, timedelta
     from utils.filtro import filtrar_publicadas_recentemente
@@ -155,10 +159,6 @@ def test_recencia_padrao_aceita_ate_cinco_dias_e_rejeita_seis():
         (hoje - timedelta(days=5)).isoformat(),
     ]
     assert descartadas == 1
-
-
-def test_extrair_escopo_remoto(nome, local, modalidade, esperado):
-    assert extrair_escopo_remoto(local, modalidade) == esperado
 
 
 # ---------------------------------------------------------------------------
