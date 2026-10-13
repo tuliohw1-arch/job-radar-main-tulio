@@ -54,7 +54,7 @@ def idade_publicacao_em_dias(publicado_em: str, hoje: date | None = None) -> int
 
 
 def filtrar_publicadas_recentemente(
-    vagas: list[Job], dias_maximos: int = 3, hoje: date | None = None
+    vagas: list[Job], dias_maximos: int = 5, hoje: date | None = None
 ) -> tuple[list[Job], int]:
     """Mantém apenas vagas com data verificável e idade entre 0 e N dias.
 
