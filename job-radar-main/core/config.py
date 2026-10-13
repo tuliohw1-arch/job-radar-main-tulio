@@ -395,6 +395,10 @@ TERMOS_PRIORITARIOS = [
     "analista de cx jr",
     "experiência do cliente",
     "customer onboarding",
+    "revops analyst",
+    "sales operations",
+    "business operations",
+    "marketing operations",
 ]
 
 # Medido: os TERMOS_BUSCA inteiros (hoje 42) rodando em TODO ciclo é o que
