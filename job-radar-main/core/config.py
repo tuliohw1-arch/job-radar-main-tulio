@@ -11,6 +11,11 @@ load_dotenv()
 # 1) Objetivo principal: CRM.
 KEYWORDS_CARGO_FORTE = [
     "Analista de CRM",
+    "Analista de CRM Júnior",
+    "Analista de CRM Junior",
+    "Analista Jr de CRM",
+    "CRM Jr",
+    "CRM Junior",
     "CRM Analyst",
     "Especialista em CRM",
     "Especialista de CRM",
@@ -36,6 +41,12 @@ KEYWORDS_CARGO_FORTE = [
 KEYWORDS_CUSTOMER_SUCCESS_CX = [
     "Analista de Customer Success",
     "Customer Success Analyst",
+    "Customer Success Analyst Jr",
+    "Customer Success Analyst Junior",
+    "Customer Success Associate Jr",
+    "Assistente de Customer Success",
+    "Analista de Sucesso do Cliente Jr",
+    "Analista de Sucesso do Cliente Junior",
     "Customer Success Jr",
     "Customer Success Junior",
     "Customer Success Associate",
@@ -48,9 +59,20 @@ KEYWORDS_CUSTOMER_SUCCESS_CX = [
     "Analista de Experiência do Cliente",
     "Analista de Experiencia do Cliente",
     "Customer Experience Analyst",
+    "Customer Experience Analyst Jr",
+    "Customer Experience Analyst Junior",
+    "Analista de Customer Experience Jr",
+    "Analista de Customer Experience Junior",
+    "Analista de Experiência do Cliente Jr",
+    "Analista de Experiencia do Cliente Jr",
+    "Customer Experience Junior",
     "Customer Experience Jr",
     "Customer Experience Associate",
     "CX Analyst",
+    "CX Jr",
+    "CX Junior",
+    "Analista de CX Jr",
+    "Analista de CX Junior",
     "Analista de CX",
 ]
 
@@ -154,6 +176,9 @@ TERMOS_CARGO_EXTRA = [
     "lifecycle marketing",
     "retention marketing",
     "customer success",
+    "customer success jr",
+    "analista de sucesso do cliente jr",
+    "cx jr",
     "customer experience",
     "customer onboarding",
     "onboarding",
@@ -166,6 +191,16 @@ TERMOS_CARGO_EXTRA = [
     "relacionamento com cliente",
     "sucesso do cliente",
     "suporte ao cliente jr",
+    "analista de crm jr",
+    "analista jr de crm",
+    "crm junior",
+    "customer success jr",
+    "customer success analyst jr",
+    "analista de sucesso do cliente jr",
+    "cx jr",
+    "analista de cx jr",
+    "customer experience jr",
+    "analista de customer experience jr",
 ]
 
 TERMOS_CARGO = sorted(set(k.lower() for k in KEYWORDS) | set(TERMOS_CARGO_EXTRA))
@@ -204,6 +239,9 @@ TERMOS_BUSCA = TERMOS_CARGO + TERMOS_FERRAMENTA
 # não caberia. É essa folga que torna a mudança possível agora.
 TERMOS_PRIORITARIOS = [
     "analista de crm",
+    "analista de crm júnior",
+    "analista de crm junior",
+    "analista jr de crm",
     "crm",
     "customer success",
     "customer experience",
