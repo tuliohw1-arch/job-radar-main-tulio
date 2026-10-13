@@ -29,7 +29,16 @@ def test_novos_cargos_proximos_de_crm_sao_aceitos():
         "Analista de CRM Junior",
         "Analista Jr de CRM",
         "CRM Jr",
+        "Analista CRM Jr",
+        "Analista Jr CRM",
+        "CRM Analyst Junior",
+        "CRM Marketing Analyst",
+        "Assistente CRM",
         "Customer Success Analyst Jr",
+        "Analista CS Jr",
+        "CS Analyst Junior",
+        "Customer Success Specialist Jr",
+        "Analista Jr de Customer Success",
         "Customer Success Associate Jr",
         "Assistente de Customer Success",
         "Analista de Sucesso do Cliente Jr",
@@ -37,6 +46,10 @@ def test_novos_cargos_proximos_de_crm_sao_aceitos():
         "Customer Success Junior",
         "Analista de Sucesso do Cliente Júnior",
         "Customer Experience Analyst Jr",
+        "CX Analyst Jr",
+        "Analista CX Junior",
+        "Customer Experience Specialist Jr",
+        "Analista Jr de CX",
         "Analista de Customer Experience Jr",
         "Analista de Experiência do Cliente Jr",
         "CX Jr",
@@ -81,3 +94,27 @@ def test_prioridade_do_ranking_preserva_crm_acima_das_portas_de_entrada():
     customer_success = vaga("Customer Success Jr").pontuar_relevancia(REGRAS)
     onboarding = vaga("Customer Onboarding Specialist").pontuar_relevancia(REGRAS)
     assert crm > customer_success > onboarding
+
+
+def test_variantes_junior_estao_nas_keywords_e_nos_termos_de_busca():
+    from core.config import KEYWORDS, TERMOS_BUSCA, TERMOS_PRIORITARIOS
+
+    keywords_normalizadas = {termo.casefold() for termo in KEYWORDS}
+    buscas_normalizadas = {termo.casefold() for termo in TERMOS_BUSCA}
+    prioritarias_normalizadas = {termo.casefold() for termo in TERMOS_PRIORITARIOS}
+
+    esperadas = [
+        "Analista CRM Jr",
+        "CRM Analyst Junior",
+        "Analista CS Jr",
+        "Customer Success Analyst Junior",
+        "CX Analyst Jr",
+        "Analista Jr de CX",
+    ]
+    for termo in esperadas:
+        assert termo.casefold() in keywords_normalizadas, f"keyword ausente: {termo}"
+        assert termo.casefold() in buscas_normalizadas, f"termo de busca ausente: {termo}"
+
+    assert "analista crm jr" in prioritarias_normalizadas
+    assert "analista cs jr" in prioritarias_normalizadas
+    assert "analista de cx jr" in prioritarias_normalizadas
