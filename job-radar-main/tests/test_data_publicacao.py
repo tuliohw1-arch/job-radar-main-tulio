@@ -117,3 +117,32 @@ def test_formato_nao_iso_vai_pra_tela_intacto():
     assert _vaga("há 7 meses").publicado_em_legivel == "há 7 meses"
     assert _vaga("Publicada em 11/08").publicado_em_legivel == "Publicada em 11/08"
     assert _vaga("").publicado_em_legivel == ""
+
+
+# ---------------------- experimento 5 x 7 dias -------------------------
+
+def test_limite_5_dias_exclui_vaga_de_6_dias():
+    from utils.filtro import filtrar_publicadas_recentemente
+
+    publicada = (_hoje() - timedelta(days=6)).isoformat()
+    aprovadas, descartadas = filtrar_publicadas_recentemente([_vaga(publicada)], dias_maximos=5, hoje=_hoje())
+    assert aprovadas == []
+    assert descartadas == 1
+
+
+def test_limite_7_dias_recupera_vaga_de_6_dias():
+    from utils.filtro import filtrar_publicadas_recentemente
+
+    publicada = (_hoje() - timedelta(days=6)).isoformat()
+    aprovadas, descartadas = filtrar_publicadas_recentemente([_vaga(publicada)], dias_maximos=7, hoje=_hoje())
+    assert len(aprovadas) == 1
+    assert descartadas == 0
+
+
+def test_limite_7_dias_nao_aceita_data_ausente_ou_ambigua():
+    from utils.filtro import filtrar_publicadas_recentemente
+
+    vagas = [_vaga(""), _vaga("data desconhecida"), _vaga("2099-01-01")]
+    aprovadas, descartadas = filtrar_publicadas_recentemente(vagas, dias_maximos=7, hoje=_hoje())
+    assert aprovadas == []
+    assert descartadas == 3
