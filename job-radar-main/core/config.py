@@ -495,7 +495,7 @@ TERMOS_PRIORITARIOS = [
 TERMOS_POR_CICLO = 10
 
 # Recência estrita do perfil Brasil: data original comprovada, não data de coleta.
-DIAS_MAXIMOS_PUBLICACAO = 5
+DIAS_MAXIMOS_PUBLICACAO = int(os.getenv("DIAS_MAXIMOS_PUBLICACAO", "5"))
 
 # Onde vaga HIBRIDA ou PRESENCIAL e aceita (mais "Remoto", que nao e
 # cidade e sim a porta de entrada da regra de modalidade remota — ver
