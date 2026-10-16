@@ -1291,6 +1291,17 @@ class Job:
         local_norm = _normalizar(self.local)
         modalidade_norm = _normalizar(self.modalidade)
 
+        # A classificação "Remoto" da fonte não pode vencer evidência
+        # contraditória no título OU no campo de localização. Há fontes que
+        # aplicam filtro remoto nativo de forma imperfeita e devolvem cards
+        # com "Remote" no local, mas "Hybrid"/"Híbrido" no próprio anúncio.
+        # Esta camada só usa campos que o scraper já coletou; não presume que
+        # a descrição completa foi verificada.
+        modalidade_contraditoria = (
+            _modalidade_pelo_titulo(self.titulo)
+            or _modalidade_pelo_titulo(self.local)
+        )
+
         bate_forte = any(
             _contem_termo(_normalizar(k), titulo_norm) for k in regras.keywords_forte
         )
@@ -1330,7 +1341,11 @@ class Job:
         # passa pelo mesmo caminho de bate_remoto/escopo que "remoto" já
         # passava, em vez de furar o filtro por um atalho.
         quer_remoto = any(_normalizar(c) in _FLAGS_REMOTO for c in regras.cidades)
-        bate_remoto = quer_remoto and _confirma_remoto(modalidade_norm, local_norm)
+        bate_remoto = (
+            quer_remoto
+            and _confirma_remoto(modalidade_norm, local_norm)
+            and modalidade_contraditoria is None
+        )
 
         # Calculado uma vez só e reaproveitado nos dois gates abaixo
         # (mercado aceito e idioma exigido) — os dois leem o mesmo escopo.

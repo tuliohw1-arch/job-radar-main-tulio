@@ -274,3 +274,41 @@ def test_pipeline_brasil_usa_cinco_dias_na_chamada_real():
         isinstance(dias[0], ast.Constant)
         and dias[0].value == 5
     )
+
+
+@pytest.mark.parametrize(
+    "nome,titulo,local,modalidade",
+    [
+        (
+            "fonte-remota-titulo-hybrid",
+            "CRM Analyst Pleno - Hybrid",
+            "Remoto - Brasil",
+            "Remoto",
+        ),
+        (
+            "fonte-remota-local-hibrido",
+            "Analista de CRM Pleno",
+            "Remoto / Híbrido",
+            "Remoto",
+        ),
+        (
+            "fonte-remota-local-presencial",
+            "Analista de CRM Pleno",
+            "Remoto, mas trabalho presencial",
+            "Remoto",
+        ),
+    ],
+)
+def test_modalidade_contraditoria_rejeita_falso_remoto(
+    nome, titulo, local, modalidade
+):
+    """Uma fonte marcar remoto não deve superar sinais explícitos de híbrido/presencial."""
+    job = Job(
+        titulo=titulo,
+        empresa="Teste",
+        local=local,
+        link=f"https://teste.invalido/{nome}",
+        site="Teste",
+        modalidade=modalidade,
+    )
+    assert job.combina_com(PERFIL_BR.regras) is False
