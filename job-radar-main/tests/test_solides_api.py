@@ -56,6 +56,7 @@ def test_converte_a_vaga_real_da_api():
     assert job.modalidade == "Presencial"
     assert job.publicado_em == date.today().isoformat()
     assert job.site == "Solides"
+    assert job.link == "https://vagas.solides.com.br/vaga/912529"
 
 
 def test_usa_a_sigla_e_nao_o_nome_do_estado():
@@ -92,7 +93,7 @@ def test_local_com_campo_faltando():
     assert montar_local({}) == "Não informado"
 
 
-@pytest.mark.parametrize("faltando", ["title", "redirectLink"])
+@pytest.mark.parametrize("faltando", ["title", "id"])
 def test_vaga_sem_o_essencial_e_descartada(faltando):
     assert montar_job({**VAGA_API, faltando: ""}) is None
 
