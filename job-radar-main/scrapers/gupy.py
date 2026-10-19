@@ -8,38 +8,20 @@ from scrapers.base import BaseScraper
 
 logger = get_logger()
 
-# API que o proprio portal da Gupy chama pra montar a pagina de busca.
-#
-# MEDIDO (2026-08-29): o scraper anterior abria um NAVEGADOR e raspava o HTML
-# com o seletor "a:has(h3)", lendo no maximo 3 paginas de 12 = teto de 36
-# vagas por termo. Esta API responde, pro mesmo termo "analista de dados":
-#
-#     {"pagination": {"total": 252, "limit": 10, "offset": 0}}
-#
-# 252 contra 36. Era essa a explicacao das 59 vagas que a Gupy trouxe em tres
-# semanas -- volume ela sempre teve; o scraper e que so enxergava o comeco.
-#
-# O que a troca resolve, alem do alcance:
-#   - paginacao deixa de ser adivinhada. O scraper de HTML descobria o fim
-#     CONTANDO cards e comparando com a primeira pagina, mecanismo que ja
-#     produziu alarme falso de "vaga perdida" (ver d5db08a). Aqui a propria
-#     resposta diz o total: para-se quando offset >= total, sem heuristica.
-#   - publishedDate e workplaceType vem prontos. O HTML nao trazia data
-#     nenhuma, e vaga velha chegava como nova.
-#   - sem navegador: nao ha seletor pra quebrar quando a Gupy mexe no layout,
-#     e o ciclo encurta.
-#
-# O QUE NAO MUDOU, de proposito: o Job montado, o filtro, a pontuacao, a
-# deduplicacao e o formato do log. So a camada de busca foi trocada.
-URL_API = "https://employability-portal.gupy.io/api/v1/jobs"
+# API atual de busca pública da Gupy.
+# Com limit=10 a resposta informa o total correto; valores maiores fazem
+# a API reportar total=100 e podem interromper a paginação antes do fim.
+URL_API = "https://portal.gupy.io/api/job-search/jobs"
+
+# Tamanho que mantém correta a paginação do endpoint atual.
+LIMITE_POR_PAGINA = 10
 
 # A API aceita limit alto (testado com 100). 100 por requisicao cobre a
 # maioria dos termos numa chamada so.
 LIMITE_POR_PAGINA = 100
 
-# Teto de vagas por termo. Nao e limitacao da API -- e escolha: termo
-# concorrido tem centenas, e as ultimas sao as mais antigas e menos
-# relevantes. 300 e 8x o teto anterior e ainda cabe em 3 requisicoes.
+# Teto de vagas por termo. Para termos concorridos, isso limita a leitura
+# às 30 páginas mais recentes, sem percorrer todo o histórico.
 MAX_VAGAS_POR_TERMO = 300
 
 TIMEOUT = 30
