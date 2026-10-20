@@ -58,12 +58,20 @@ def _contem_termo(termo: str, texto: str, aceitar_plural: bool = False) -> bool:
 TERMOS_REMOTO = [
     "remot",  # raiz: Remoto/Remota/Remote/Trabalho Remoto/100% Remoto/Fully Remote
     "home office",
+    "homeoffice",
+    "home-office",
     "work from home",
-    "trabalhe de casa",  # variante em português vista ao vivo no Catho
-    "teletrabalho",  # português (Portugal)
-    "teletrabajo",  # espanhol — termo padrão no mercado espanhol
-    "trabajo a distancia",  # espanhol
-    "desde casa",  # espanhol ("trabajo desde casa")
+    "work-from-home",
+    "work from anywhere",
+    "remote work",
+    "trabalhe de casa",
+    "trabalho de casa",
+    "teletrabalho",
+    "teletrabajo",
+    "trabajo a distancia",
+    "trabajo desde casa",
+    "trabalho a distancia",
+    "desde casa",
     "anywhere",
 ]
 
@@ -99,33 +107,17 @@ def _modalidade_pelo_titulo(titulo: str) -> str | None:
 _FLAGS_REMOTO = ("remoto", "remota", "remote")
 
 
-def _confirma_remoto(modalidade_norm: str, local_norm: str) -> bool:
-    """A vaga e remota?
+def _confirma_remoto(modalidade_norm: str, local_norm: str, titulo_norm: str = "") -> bool:
+    """Confirma remoto por modalidade ou por indicação explícita nos campos.
 
-    Caminho principal: o campo `modalidade`, preenchido pelo scraper na
-    extracao. E o caminho certo -- detectar uma vez, na fonte, em vez de
-    reparsear texto a cada chamada de combina_com().
-
-    MEDIDO: exigir SO o campo criava falso negativo em toda fonte que nao
-    expoe modalidade no card. Confirmado em teste: local="Home Office" com
-    modalidade="" era REJEITADA no perfil Brasil, e o mesmo vale pra
-    "100% Remoto", "Trabalhe de casa" e "Teletrabajo" escritos no campo de
-    local. Todo o vocabulario de TERMOS_REMOTO existe exatamente pra
-    reconhecer isso e tinha ficado inalcancavel nesse caminho.
-
-    Fallback so quando `modalidade` esta VAZIA (fonte nao informou) -- nunca
-    sobrepoe uma modalidade que a fonte declarou. Vaga marcada "Hibrido"
-    ou "Presencial" continua nao sendo remota, mesmo com a palavra
-    "remoto" solta no texto do local.
-
-    Le so `local`, nunca o titulo. Concatenar os dois foi o bug original
-    desta base: vaga americana com "Hybrid Remote" no TITULO batia "remot"
-    e passava como remota, com local="Bloomington, IN".
+    Sinais como "homeoffice" ou "Remote" podem vir no título ou na localização,
+    mesmo quando a fonte não preenche o campo modalidade. Evidência explícita
+    de híbrido/presencial em qualquer um desses campos prevalece e reprova.
     """
-    if modalidade_norm in ("remoto", "remota"):
-        return True
-    return not modalidade_norm and _e_remoto(local_norm)
-
+    textos = (modalidade_norm, local_norm, titulo_norm)
+    if any(_modalidade_pelo_titulo(texto) for texto in textos):
+        return False
+    return any(_e_remoto(texto) for texto in textos)
 
 # MEDIDO: "Remote — US only", "Remote — India", "Remote — Portugal" e
 # "Remote — Brazil only" passavam TODOS igual no filtro, porque _e_remoto()
@@ -1121,21 +1113,22 @@ class Job:
     motivo: str = ""
 
     def __post_init__(self):
-        """Sobrepõe modalidade="Remoto" quando o TÍTULO contradiz (Híbrido/
-        Presencial) — ver _modalidade_pelo_titulo.
+        """Normaliza a modalidade usando indicações de remoto e contradições.
 
-        MEDIDO: essa correção existia só dentro de linkedin.py/
-        linkedin_intl.py, aplicada manualmente na hora de montar o Job.
-        indeed_intl.py tinha o mesmo problema (modalidade="Remoto" cravada
-        direto quando o filtro nativo da URL está ligado, sem olhar o
-        título) e não usava a correção — vaga híbrida do Indeed com filtro
-        nativo passava como remota no perfil internacional. Import por
-        scraper depende de cada um lembrar de aplicar; aqui roda pra TODO
-        Job automaticamente, incluindo fonte futura que ainda nem existe.
+        O scraper nem sempre preenche modalidade: quando título ou local
+        declaram home office/remoto, completa como Remoto. Se qualquer desses
+        campos declarar híbrido ou presencial, essa informação prevalece.
         """
-        modalidade_real = _modalidade_pelo_titulo(self.titulo)
-        if modalidade_real and self.modalidade == "Remoto":
-            self.modalidade = modalidade_real
+        textos = (self.modalidade or "", self.titulo or "", self.local or "")
+        modalidade_contraditoria = next(
+            (_modalidade_pelo_titulo(texto) for texto in textos
+             if _modalidade_pelo_titulo(texto)),
+            None,
+        )
+        if modalidade_contraditoria:
+            self.modalidade = modalidade_contraditoria
+        elif any(_e_remoto(_normalizar(texto)) for texto in textos):
+            self.modalidade = "Remoto"
 
     @property
     def id(self) -> str:
@@ -1298,7 +1291,8 @@ class Job:
         # Esta camada só usa campos que o scraper já coletou; não presume que
         # a descrição completa foi verificada.
         modalidade_contraditoria = (
-            _modalidade_pelo_titulo(self.titulo)
+            _modalidade_pelo_titulo(self.modalidade)
+            or _modalidade_pelo_titulo(self.titulo)
             or _modalidade_pelo_titulo(self.local)
         )
 
@@ -1343,7 +1337,7 @@ class Job:
         quer_remoto = any(_normalizar(c) in _FLAGS_REMOTO for c in regras.cidades)
         bate_remoto = (
             quer_remoto
-            and _confirma_remoto(modalidade_norm, local_norm)
+            and _confirma_remoto(modalidade_norm, local_norm, titulo_norm)
             and modalidade_contraditoria is None
         )
 
