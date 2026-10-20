@@ -26,6 +26,27 @@ def test_aceita_cargos_alinhados(titulo):
     assert vaga(titulo).combina_com(PERFIL_BR.regras)
 
 
+@pytest.mark.parametrize("titulo, local", [
+    ("Analista de CRM - Homeoffice", "São Paulo - SP"),
+    ("CRM Analyst - Home Office", "Remote - Brazil"),
+    ("CRM Analyst - Work from Home", "São Paulo - SP"),
+    ("Analista de CRM - Remote", "Brasil"),
+])
+def test_aceita_indicacao_remota_no_titulo_ou_local(titulo, local):
+    job = vaga(titulo, local, modalidade="")
+    assert job.modalidade == "Remoto"
+    assert job.combina_com(PERFIL_BR.regras)
+
+
+@pytest.mark.parametrize("titulo, local, modalidade", [
+    ("CRM Analyst - Hybrid Remote", "Remote - Brazil", "Remoto"),
+    ("Analista de CRM - Homeoffice", "São Paulo - SP", "Híbrido"),
+    ("CRM Analyst", "Home Office", "Presencial"),
+])
+def test_sinal_hibrido_ou_presencial_prevalece(titulo, local, modalidade):
+    assert not vaga(titulo, local, modalidade).combina_com(PERFIL_BR.regras)
+
+
 @pytest.mark.parametrize("modalidade, local", [
     ("Híbrido", "Belo Horizonte, MG"), ("Presencial", "Belo Horizonte, MG"),
     ("Híbrido", "Recife, PE"), ("Presencial", "São Paulo, SP"),
