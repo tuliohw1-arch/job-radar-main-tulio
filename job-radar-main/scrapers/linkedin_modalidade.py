@@ -9,7 +9,7 @@ from html.parser import HTMLParser
 import re
 from urllib.parse import urlparse
 
-from core.job import _e_remoto, _modalidade_contraditoria, _normalizar
+from core.job import _e_remoto_afirmado, _modalidade_contraditoria, _normalizar
 
 URL_DETALHE = "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{}"
 TIMEOUT_DETALHE_MS = 20_000
@@ -68,7 +68,7 @@ def classificar_modalidade_html(html: str) -> str:
     contraditoria = _modalidade_contraditoria(texto)
     if contraditoria:
         return contraditoria
-    if _e_remoto(texto):
+    if _e_remoto_afirmado(texto):
         return "Remoto"
     return ""
 
