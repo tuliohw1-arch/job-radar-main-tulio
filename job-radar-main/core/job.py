@@ -60,10 +60,16 @@ TERMOS_REMOTO = [
     "home office",
     "homeoffice",
     "home-office",
+    "home-based",
+    "home based",
     "work from home",
     "work-from-home",
+    "work at home",
     "work from anywhere",
     "remote work",
+    "telework",
+    "telecommute",
+    "wfh",
     "trabalhe de casa",
     "trabalho de casa",
     "teletrabalho",
@@ -80,7 +86,7 @@ def _e_remoto(texto: str) -> bool:
     return any(termo in texto for termo in TERMOS_REMOTO)
 
 
-# Vocabulário que, no TÍTULO da vaga, contradiz "remoto" — usado pra não
+# Vocabulário que no título, localização ou descrição da vaga contradiz "remoto" — usado pra não
 # confiar cegamente em fonte com filtro nativo de remoto (f_WT=2 do
 # LinkedIn) quando ela diverge do próprio anúncio. MEDIDO em produção: 1
 # de 81 vagas internacionais veio com modalidade=Remoto (via f_WT=2, o
@@ -88,18 +94,20 @@ def _e_remoto(texto: str) -> bool:
 # (Analista de Datos) - Hybrid" — o filtro do próprio LinkedIn às vezes
 # diverge do anúncio real. Como o perfil internacional só quer remoto de
 # verdade, o título vence quando contradiz a classificação da fonte.
-_TERMOS_TITULO_HIBRIDO = ["hybrid", "hibrido", "hibrida", "semi-presencial", "semi presencial"]
-_TERMOS_TITULO_PRESENCIAL = ["on-site", "onsite", "on site", "presencial", "in-person", "in person", "office-based"]
+_TERMOS_HIBRIDO = ["hybrid", "hibrido", "hibrida", "semi-presencial", "semi presencial"]
+_TERMOS_PRESENCIAL = [
+    "on-site", "onsite", "on site", "presencial", "in-person", "in person",
+    "office-based", "office based", "in-office", "in office", "in the office",
+    "work from office", "on-premises", "on premises",
+]
 
 
-def _modalidade_pelo_titulo(titulo: str) -> str | None:
-    """Devolve a modalidade real quando o TÍTULO contradiz "remoto"
-    (Híbrido/Presencial) — None quando o título não contradiz nada (a
-    classificação da fonte permanece confiável)."""
-    titulo_norm = _normalizar(titulo)
-    if any(termo in titulo_norm for termo in _TERMOS_TITULO_HIBRIDO):
+def _modalidade_contraditoria(texto: str) -> str | None:
+    """Detecta evidência explícita de regime híbrido/presencial em qualquer texto."""
+    texto_norm = _normalizar(texto)
+    if any(termo in texto_norm for termo in _TERMOS_HIBRIDO):
         return "Híbrido"
-    if any(termo in titulo_norm for termo in _TERMOS_TITULO_PRESENCIAL):
+    if any(termo in texto_norm for termo in _TERMOS_PRESENCIAL):
         return "Presencial"
     return None
 
@@ -115,7 +123,7 @@ def _confirma_remoto(modalidade_norm: str, local_norm: str, titulo_norm: str = "
     de híbrido/presencial em qualquer um desses campos prevalece e reprova.
     """
     textos = (modalidade_norm, local_norm, titulo_norm)
-    if any(_modalidade_pelo_titulo(texto) for texto in textos):
+    if any(_modalidade_contraditoria(texto) for texto in textos):
         return False
     return any(_e_remoto(texto) for texto in textos)
 
@@ -1121,8 +1129,8 @@ class Job:
         """
         textos = (self.modalidade or "", self.titulo or "", self.local or "")
         modalidade_contraditoria = next(
-            (_modalidade_pelo_titulo(texto) for texto in textos
-             if _modalidade_pelo_titulo(texto)),
+            (_modalidade_contraditoria(texto) for texto in textos
+             if _modalidade_contraditoria(texto)),
             None,
         )
         if modalidade_contraditoria:
@@ -1291,9 +1299,9 @@ class Job:
         # Esta camada só usa campos que o scraper já coletou; não presume que
         # a descrição completa foi verificada.
         modalidade_contraditoria = (
-            _modalidade_pelo_titulo(self.modalidade)
-            or _modalidade_pelo_titulo(self.titulo)
-            or _modalidade_pelo_titulo(self.local)
+            _modalidade_contraditoria(self.modalidade)
+            or _modalidade_contraditoria(self.titulo)
+            or _modalidade_contraditoria(self.local)
         )
 
         bate_forte = any(

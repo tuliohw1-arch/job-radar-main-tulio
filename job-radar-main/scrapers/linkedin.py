@@ -1,5 +1,6 @@
 
 import time
+from collections import Counter
 from urllib.parse import quote_plus
 
 from playwright.sync_api import sync_playwright
@@ -9,9 +10,10 @@ from core.config import (
     LOCATIONS_LINKEDIN_CIDADES_PRESENCIAL,
     LOCATIONS_LINKEDIN_REMOTO_APENAS,
 )
-from core.job import Job, _e_remoto, _normalizar, extrair_data_do_card
+from core.job import Job, extrair_data_do_card
 from core.logger import get_logger
 from scrapers.base import BaseScraper
+from scrapers.linkedin_modalidade import ler_modalidade_anuncio
 
 logger = get_logger()
 
@@ -110,14 +112,12 @@ class LinkedInScraper(BaseScraper):
     principalmente vindos de IPs de nuvem/datacenter, como os do GitHub
     Actions. Não é possível garantir estabilidade a longo prazo.
 
-    Roda duas passadas por termo (e por mercado, ver `locations` abaixo):
-    uma nacional sem filtro de modalidade (pega vaga presencial/híbrida em
-    cidade específica, cobre Recife/Natal/Maceió etc.) e outra com f_WT=2
-    (só vaga que o próprio LinkedIn marca como remota). Essa segunda marca o
-    campo `modalidade` como "Remoto" diretamente (o próprio LinkedIn já
-    garante isso), porque o card nunca expõe isso sozinho em texto (ver
-    MAX_PAGINAS_REMOTO acima) — `local` fica só com a cidade que o card
-    mostra, mesmo pra vaga remota.
+    Usa f_WT=2 apenas para descobrir candidatas. Como esse filtro pode
+    classificar vagas híbridas e presenciais como remotas, o scraper consulta
+    o endpoint público de detalhe de cada anúncio e só cria Job quando a
+    própria página declara remoto/home office. Híbrido, presencial, página
+    indisponível ou modalidade não declarada são descartados. O detalhe é
+    armazenado em cache por URL durante o ciclo para evitar chamadas repetidas.
 
     `locations`: LinkedIn é a única fonte deste pipeline com alcance fora do
     Brasil — as outras são portais brasileiros. Antes ficava fixo em
@@ -164,6 +164,8 @@ class LinkedInScraper(BaseScraper):
             if locations_cidades_presencial is not None
             else LOCATIONS_LINKEDIN_CIDADES_PRESENCIAL
         )
+        self._modalidade_cache: dict[str, tuple[str, str]] = {}
+        self._descartes_modalidade: Counter[str] = Counter()
 
     def buscar_vagas(self) -> list[Job]:
         vagas: list[Job] = []
@@ -174,9 +176,15 @@ class LinkedInScraper(BaseScraper):
 
         total_mercados = len(self.locations)
         logger.info(
-            f"[LinkedIn] {len(vagas)} vaga(s) encontrada(s) no total "
-            f"({total_mercados} mercado(s), somente remoto): {', '.join(self.locations)}"
+            f"[LinkedIn] {len(vagas)} vaga(s) com remoto confirmado no detalhe "
+            f"({total_mercados} mercado(s)): {', '.join(self.locations)}"
         )
+        if self._descartes_modalidade:
+            motivos = "; ".join(
+                f"{motivo}: {quantidade}"
+                for motivo, quantidade in sorted(self._descartes_modalidade.items())
+            )
+            logger.info(f"[LinkedIn] Candidatas descartadas após ler o anúncio: {motivos}")
         return vagas
 
     def _buscar_termo(
@@ -266,26 +274,24 @@ class LinkedInScraper(BaseScraper):
                             local_el = card.query_selector(".job-search-card__location")
                             local = local_el.inner_text().strip() if local_el else "Não informado"
 
-                            # f_WT=2 já garante que é vaga remota (o próprio
-                            # LinkedIn classificou assim), mesmo quando o
-                            # campo local só mostra a cidade da empresa —
-                            # marca direto, sem precisar achar "remoto" no
-                            # texto do local. f_WT=2 às vezes diverge do
-                            # próprio anúncio (título diz "Hybrid") —
-                            # Job.__post_init__ corrige isso pra QUALQUER
-                            # fonte, não só aqui. Passada nacional: só marca
-                            # se o próprio card organicamente disser isso no
-                            # local.
-                            if remoto:
-                                modalidade = "Remoto"
-                            else:
-                                modalidade = "Remoto" if _e_remoto(_normalizar(local)) else ""
-
+                            # f_WT=2 é apenas descoberta: os anúncios de
+                            # Gamma, Zupper e Rodobens vieram marcados como
+                            # remotos, mas os detalhes dizem presencial ou
+                            # híbrido. A confirmação ocorre no anúncio abaixo.
                             link_el = card.query_selector("a.base-card__full-link")
                             link = link_el.get_attribute("href") if link_el else None
                             if not link:
                                 continue
                             link = link.split("?")[0]
+
+                            modalidade, motivo = ler_modalidade_anuncio(
+                                page.request, link, self._modalidade_cache
+                            )
+                            if modalidade != "Remoto":
+                                self._descartes_modalidade[
+                                    modalidade or motivo or "modalidade não confirmada"
+                                ] += 1
+                                continue
 
                             # A tag <time> do card traz a data ABSOLUTA
                             # (datetime="2026-03-26"). O texto traz "4

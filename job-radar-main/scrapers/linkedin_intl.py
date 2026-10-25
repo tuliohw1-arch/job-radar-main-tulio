@@ -1,12 +1,14 @@
 
 import time
+from collections import Counter
 from urllib.parse import quote_plus
 
 from playwright.sync_api import sync_playwright
 
-from core.job import Job, _e_remoto, _normalizar, extrair_data_do_card
+from core.job import Job, extrair_data_do_card
 from core.logger import get_logger
 from scrapers.base import BaseScraper
+from scrapers.linkedin_modalidade import ler_modalidade_anuncio
 
 logger = get_logger()
 
@@ -26,32 +28,36 @@ class LinkedInIntlScraper(BaseScraper):
     Mesmos avisos do LinkedIn normal: endpoint não documentado, sujeito a
     bloqueio/rate-limit sem aviso prévio.
 
-    Roda duas passadas por termo/país — mesma estrutura de scrapers/linkedin.py
-    (ver docstring de LinkedInScraper): uma nacional sem filtro de modalidade
-    (pega vaga presencial/híbrida, alimenta o eixo Ibérico quando ligado) e
-    outra com f_WT=2 (só vaga que o próprio LinkedIn marca como remota).
-    Antes só existia a nacional, e modalidade só era preenchida quando o
-    texto de local dizia "remote" organicamente — o que quase nunca
-    acontece (o card mostra a cidade onde a empresa está registrada, não a
-    modalidade), confirmado com o mesmo raciocínio que já motivou a segunda
-    passada no scraper nacional. Resultado medido: praticamente toda vaga
-    remota real vinha com modalidade vazia e era barrada por CIDADES_INTL
-    (que só aceita "Remote"/"Remoto"), deixando a fonte principal do
-    pipeline internacional muda pra REGRAS_INTL.
+    Usa apenas f_WT=2 para descobrir candidatas remotas, e consulta o detalhe
+    público de cada anúncio antes de criar um Job. O filtro nativo já foi
+    medido devolvendo híbridas/presenciais como remotas; portanto, o detalhe
+    explícito precisa confirmar remoto/home office. Vagas híbridas, presenciais,
+    sem modalidade declarada ou com página indisponível são descartadas.
     """
 
     def __init__(self, termos_busca: list[str], locations: list[str]):
         self.termos_busca = termos_busca
         self.locations = locations
+        self._modalidade_cache: dict[str, tuple[str, str]] = {}
+        self._descartes_modalidade: Counter[str] = Counter()
 
     def buscar_vagas(self) -> list[Job]:
         vagas: list[Job] = []
         for termo in self.termos_busca:
             for location in self.locations:
-                vagas.extend(self._buscar_termo(termo, location, remoto=False))
                 vagas.extend(self._buscar_termo(termo, location, remoto=True))
 
-        logger.info(f"[LinkedIn Intl] {len(vagas)} vaga(s) encontrada(s) no total")
+        logger.info(
+            f"[LinkedIn Intl] {len(vagas)} vaga(s) com remoto confirmado no detalhe"
+        )
+        if self._descartes_modalidade:
+            motivos = "; ".join(
+                f"{motivo}: {quantidade}"
+                for motivo, quantidade in sorted(self._descartes_modalidade.items())
+            )
+            logger.info(
+                f"[LinkedIn Intl] Candidatas descartadas após ler o anúncio: {motivos}"
+            )
         return vagas
 
     def _buscar_termo(self, termo: str, location: str, remoto: bool) -> list[Job]:
@@ -103,27 +109,22 @@ class LinkedInIntlScraper(BaseScraper):
                             local_el = card.query_selector(".job-search-card__location")
                             local = local_el.inner_text().strip() if local_el else "Não informado"
 
-                            # Passada com f_WT=2: o próprio LinkedIn já filtrou
-                            # por remoto, então força modalidade="Remoto" sem
-                            # depender do texto de local (que normalmente só
-                            # mostra a cidade onde a empresa está registrada,
-                            # nunca "Remote"/"Remoto" literalmente). Filtro
-                            # nativo às vezes diverge do próprio anúncio (ex:
-                            # título diz "Hybrid") — Job.__post_init__ corrige
-                            # isso pra QUALQUER fonte, não só aqui. Passada
-                            # nacional: sem filtro nativo, só resta a detecção
-                            # orgânica no texto (raramente bate, mas serve como
-                            # fallback pro eixo Ibérico quando religado).
-                            if remoto:
-                                modalidade = "Remoto"
-                            else:
-                                modalidade = "Remoto" if _e_remoto(_normalizar(local)) else ""
-
+                            # f_WT=2 é apenas descoberta; a modalidade só
+                            # é aceita após a leitura do detalhe da própria vaga.
                             link_el = card.query_selector("a.base-card__full-link")
                             link = link_el.get_attribute("href") if link_el else None
                             if not link:
                                 continue
                             link = link.split("?")[0]
+
+                            modalidade, motivo = ler_modalidade_anuncio(
+                                page.request, link, self._modalidade_cache
+                            )
+                            if modalidade != "Remoto":
+                                self._descartes_modalidade[
+                                    modalidade or motivo or "modalidade não confirmada"
+                                ] += 1
+                                continue
 
                             # A tag <time> do card traz a data ABSOLUTA
                             # (datetime="2026-03-26"). O texto traz "4
