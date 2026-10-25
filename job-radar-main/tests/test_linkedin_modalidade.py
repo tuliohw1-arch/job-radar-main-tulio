@@ -97,7 +97,7 @@ def test_le_modalidade_no_endpoint_de_detalhe_e_cacheia_por_link():
 
 
 @pytest.mark.parametrize(
-    "request, link, esperado",
+    "request_context, link, esperado",
     [
         (_Request(_Resposta(503, "")), "https://www.linkedin.com/jobs/view/x-12345678", ("", "HTTP 503")),
         (_Request(erro=TimeoutError()), "https://www.linkedin.com/jobs/view/x-12345678", ("", "falha ao ler o detalhe")),
@@ -105,5 +105,5 @@ def test_le_modalidade_no_endpoint_de_detalhe_e_cacheia_por_link():
         (_Request(_Resposta(200, "<div>Modelo de trabalho: Presencial</div>")), "https://www.linkedin.com/jobs/view/sem-id", ("", "ID do anúncio ausente")),
     ],
 )
-def test_falha_ou_modalidade_ausente_e_rejeitada(request, link, esperado):
-    assert ler_modalidade_anuncio(request, link) == esperado
+def test_falha_ou_modalidade_ausente_e_rejeitada(request_context, link, esperado):
+    assert ler_modalidade_anuncio(request_context, link) == esperado
