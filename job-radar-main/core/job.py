@@ -105,15 +105,15 @@ _TERMOS_PRESENCIAL = [
 def _termo_modalidade_afirmado(texto_norm: str, termo: str, raiz: bool = False) -> bool:
     """Ignora menções negadas como "não há modelo híbrido" e "not remote"."""
     padrao_termo = (
-        rf"(?<!\\w){re.escape(termo)}\\w*(?!\\w)"
+        rf"(?<!\w){re.escape(termo)}\w*(?!\w)"
         if raiz
-        else rf"(?<!\\w){re.escape(termo)}(?!\\w)"
+        else rf"(?<!\w){re.escape(termo)}(?!\w)"
     )
     for match in re.finditer(padrao_termo, texto_norm):
         inicio_contexto = max(0, match.start() - 60)
         contexto_anterior = texto_norm[inicio_contexto:match.start()]
         negacao = re.search(
-            r"\\b(?:nao|nem|not|no|never|neither)\\b(?:\\W+\\w+){0,3}\\W*$",
+            r"\b(?:nao|nem|not|no|never|neither)\b(?:\W+\w+){0,3}\W*$",
             contexto_anterior,
         )
         if not negacao:
