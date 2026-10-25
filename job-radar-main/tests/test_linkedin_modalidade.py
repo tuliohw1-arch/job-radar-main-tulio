@@ -43,6 +43,15 @@ def test_hibrido_ou_presencial_prevalece_sobre_mencao_remota():
     assert classificar_modalidade_html(
         "<p>100% presencial; possibilidade futura de trabalho remoto.</p>"
     ) == "Presencial"
+    assert classificar_modalidade_html(
+        "<p>Não há modelo híbrido nem remoto.</p>"
+    ) == ""
+    assert classificar_modalidade_html(
+        "<p>Não há modelo híbrido nem remoto. A vaga é presencial.</p>"
+    ) == "Presencial"
+    assert classificar_modalidade_html(
+        "<p>Not hybrid; 100% remote.</p>"
+    ) == "Remoto"
 
 
 @pytest.mark.parametrize(
