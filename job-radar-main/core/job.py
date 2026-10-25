@@ -112,6 +112,9 @@ def _termo_modalidade_afirmado(texto_norm: str, termo: str, raiz: bool = False) 
     for match in re.finditer(padrao_termo, texto_norm):
         inicio_contexto = max(0, match.start() - 60)
         contexto_anterior = texto_norm[inicio_contexto:match.start()]
+        # A negação não atravessa limites de oração: "not hybrid; remote"
+        # afirma remoto depois do ponto e vírgula.
+        contexto_anterior = re.split(r"[.!?;,]", contexto_anterior)[-1]
         negacao = re.search(
             r"\b(?:nao|nem|not|no|never|neither)\b(?:\W+\w+){0,3}\W*$",
             contexto_anterior,
