@@ -119,6 +119,18 @@ def _garantir_coluna_situacao(conn):
     conn.execute("UPDATE vagas_vistas SET situacao = 'nova' WHERE situacao IS NULL")
 
 
+def _garantir_coluna_compatibilidade(conn):
+    """Migração aditiva para persistir score explicável e estado da descrição."""
+    colunas = [linha[1] for linha in conn.execute("PRAGMA table_info(vagas_vistas)")]
+    for nome, tipo in (
+        ("compatibilidade_score", "INTEGER"),
+        ("status_extracao", "TEXT"),
+        ("justificativa_compatibilidade", "TEXT"),
+    ):
+        if nome not in colunas:
+            conn.execute(f"ALTER TABLE vagas_vistas ADD COLUMN {nome} {tipo}")
+
+
 def _garantir_coluna_feedback(conn):
     """Migração leve: reação 👍/👎 no Telegram (botão inline, ver
     notifier/telegram.py) grava aqui se a vaga notificada era boa ou era
@@ -168,6 +180,7 @@ def iniciar_db():
         _garantir_colunas_digest(conn)
         _garantir_coluna_situacao(conn)
         _garantir_coluna_feedback(conn)
+        _garantir_coluna_compatibilidade(conn)
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_vagas_digest_pendente "
             "ON vagas_vistas (perfil, digest_pendente)"
@@ -248,13 +261,17 @@ def salvar_vaga(job, perfil_chave: str = "", digest_pendente: bool = False, expl
             """
             INSERT OR IGNORE INTO vagas_vistas
                 (id, titulo, empresa, local, link, site, chave_secundaria, publicado_em,
-                 modalidade, relevancia, perfil, digest_pendente, exploratoria, situacao)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 modalidade, relevancia, perfil, digest_pendente, exploratoria, situacao,
+                 compatibilidade_score, status_extracao, justificativa_compatibilidade)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 job.id, job.titulo, job.empresa, job.local, job.link, job.site,
                 job.chave_secundaria, job.publicado_em, job.modalidade,
                 job.relevancia, perfil_chave, int(digest_pendente), int(exploratoria), "nova",
+                getattr(job, "compatibilidade_score", 0),
+                getattr(job, "status_extracao", "indisponivel"),
+                getattr(job, "compatibilidade_justificativa", ""),
             ),
         )
 
