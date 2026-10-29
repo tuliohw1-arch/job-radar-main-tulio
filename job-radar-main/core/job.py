@@ -1155,6 +1155,8 @@ class Job:
     responsabilidades: list[str] = None
     requisitos_obrigatorios: list[str] = None
     requisitos_desejaveis: list[str] = None
+    ferramentas_detectadas: list[str] = None
+    senioridade_detectada: str = ""
     origem_descricao: str = ""
     status_extracao: str = "indisponivel"
     erro_extracao: str = ""
@@ -1177,10 +1179,13 @@ class Job:
             (_modalidade_contraditoria(texto) for texto in textos
              if _modalidade_contraditoria(texto)),
             None,
-        )
+        ) or _modalidade_contraditoria(self.descricao or "")
         if modalidade_contraditoria:
             self.modalidade = modalidade_contraditoria
-        elif any(_e_remoto(_normalizar(texto)) for texto in textos):
+        elif (
+            any(_e_remoto(_normalizar(texto)) for texto in textos)
+            or _e_remoto_afirmado(self.descricao or "")
+        ):
             self.modalidade = "Remoto"
 
     @property
