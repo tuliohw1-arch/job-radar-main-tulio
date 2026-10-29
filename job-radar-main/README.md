@@ -197,3 +197,18 @@ Registrados de propósito — problema documentado é problema que alguém pode 
 *Case de portfólio em automação de dados — Python, Playwright, SQLite, GitHub Actions e engenharia de filtro sem ML.*
 
 </div>
+
+## Expansão de famílias profissionais (perfil Brasil)
+
+O pool de títulos do perfil Brasil também cobre agora:
+
+- **Suporte e operações de TI:** analista de TI/suporte técnico/service desk júnior, operações de TI, suporte a sistemas e implantação de sistemas.
+- **Operações, processos e projetos:** operações e processos júnior, operações de negócio, analista/assistente de projetos, PMO, implantação e requisitos.
+- **Customer Success/CX:** operações de clientes, onboarding, implantação de clientes, CX júnior e qualidade de atendimento.
+- **Dados e indicadores:** analista de indicadores, dados/BI júnior, assistente de BI, relatórios, performance operacional e dados de clientes.
+- **Variações em inglês:** títulos equivalentes como *Junior IT Support Analyst*, *Junior Operations Analyst*, *Junior Data Analyst* e *Reporting Analyst*.
+
+Os títulos são específicos; palavras isoladas como “analista”, “suporte” ou “dados” não aprovam uma vaga por si só. O perfil Brasil continua exigindo remoto confirmado, escopo de contratação compatível com o Brasil e publicação verificável nos últimos `DIAS_MAXIMOS_PUBLICACAO` dias. A expansão de taxonomia não altera a janela de cinco dias nem os filtros de modalidade.
+
+**Limitação atual da classificação:** o modelo `Job` recebe título, empresa, localização, link, fonte, data e modalidade, mas não recebe a descrição completa das responsabilidades e requisitos. Portanto, a pontuação atual (1–10) é baseada em sinais disponíveis nos metadados e no título; ela não consegue ainda distinguir de forma confiável requisito obrigatório de desejável. Uma pontuação explicável de 0–100 baseada nas responsabilidades exige primeiro ampliar a extração de descrição nas fontes compatíveis e migrar a escala sem misturar os scores históricos já salvos no SQLite.
+
