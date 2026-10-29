@@ -113,8 +113,11 @@ def notificar_vaga(job) -> bool:
     texto = (
         f"🚨 <b>Nova vaga encontrada!</b>\n\n"
         f"{_linha_aviso_antiga(job)}"
-        f"<b>Relevância:</b> {_linha_relevancia(job.relevancia)}\n"
+        f"<b>Compatibilidade:</b> {getattr(job, 'compatibilidade_score', 0)}/100\n"
+        f"<b>Relevância anterior:</b> {_linha_relevancia(job.relevancia)}\n"
         f"<b>Motivo:</b> {job.motivo}\n"
+        f"<b>Descrição:</b> {getattr(job, 'status_extracao', 'indisponivel')}\n"
+        f"<b>Análise:</b> {(getattr(job, 'compatibilidade_justificativa', '') or 'Informações insuficientes')[:350]}\n"
         f"<b>Empresa:</b> {job.empresa}\n"
         f"<b>Cargo:</b> {job.titulo}\n"
         f"<b>Nível:</b> {job.senioridade}\n"
