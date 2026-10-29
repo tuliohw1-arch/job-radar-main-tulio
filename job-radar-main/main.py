@@ -38,7 +38,13 @@ from core.compatibilidade import (
     LIMIAR_COMPATIBILIDADE_MINIMA,
     pontuar_compatibilidade,
 )
-from core.descricao import analisar_secoes, extrair_descricao, normalizar_texto
+from core.descricao import (
+    analisar_secoes,
+    detectar_senioridade,
+    extrair_descricao,
+    extrair_ferramentas,
+    normalizar_texto,
+)
 
 logger = get_logger()
 
@@ -78,6 +84,12 @@ def _enriquecer_e_pontuar(vaga, cache_descricoes: dict[str, dict]) -> None:
         vaga.requisitos_obrigatorios = []
         vaga.requisitos_desejaveis = []
 
+    vaga.ferramentas_detectadas = extrair_ferramentas(vaga.descricao)
+    nivel_titulo = vaga.senioridade
+    vaga.senioridade_detectada = (
+        nivel_titulo if nivel_titulo not in ("Não especificado", "")
+        else detectar_senioridade(vaga.descricao)
+    )
     resultado_score = pontuar_compatibilidade(vaga)
     vaga.compatibilidade_score = resultado_score["score"]
     vaga.compatibilidade_criterios = resultado_score["criterios_positivos"]
