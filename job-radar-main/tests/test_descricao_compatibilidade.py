@@ -72,20 +72,20 @@ def test_descricao_curta_fica_marcada_como_incompleta_nao_completa():
 
 
 def test_pagina_sem_descricao_e_marcada_indisponivel():
-    resultado = extrair_descricao("https://example.com/job", session=SessaoFake(RespostaFake("<html><body>Menu rodape</body></html>")))
+    resultado = extrair_descricao("https://example.com/job", session=SessaoFake(RespostaFake("<html><body>Menu rodape</body></html>")), renderizar_dinamico=False)
     assert resultado["status_extracao"] == "indisponivel"
     assert resultado["descricao"] == ""
     assert resultado["erro_extracao"] == "descricao_nao_encontrada_ou_curta"
 
 
 def test_http_403_registra_status_sem_expor_detalhes_sensiveis():
-    resultado = extrair_descricao("https://example.com/job", session=SessaoFake(RespostaFake(status=403)))
+    resultado = extrair_descricao("https://example.com/job", session=SessaoFake(RespostaFake(status=403)), renderizar_dinamico=False)
     assert resultado["status_extracao"] == "indisponivel"
     assert resultado["erro_extracao"] == "http_403"
 
 
 def test_timeout_e_registrado_sem_excecao_para_o_pipeline():
-    resultado = extrair_descricao("https://example.com/job", session=SessaoFake(error=requests.Timeout()))
+    resultado = extrair_descricao("https://example.com/job", session=SessaoFake(error=requests.Timeout()), renderizar_dinamico=False)
     assert resultado["status_extracao"] == "indisponivel"
     assert resultado["erro_extracao"] == "timeout"
 
