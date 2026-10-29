@@ -460,6 +460,15 @@ def ciclo_de_busca(perfil: Perfil):
             vagas_recuperadas_descricao = []
             for vaga_por_descricao in candidatas_descricao:
                 _enriquecer_e_pontuar(vaga_por_descricao, cache_descricoes)
+                auditoria.contar("avaliadas_compatibilidade")
+                if vaga_por_descricao.status_extracao == "completa":
+                    auditoria.contar("descricao_completa")
+                else:
+                    auditoria.contar("descricao_insuficiente")
+                auditoria.registrar(
+                    vaga_por_descricao, "avaliada_compatibilidade_titulo_rejeitado",
+                    vaga_por_descricao.compatibilidade_justificativa
+                )
                 familia_comprovada = any(
                     str(criterio).startswith("Família de cargo alinhada")
                     for criterio in (vaga_por_descricao.compatibilidade_criterios or [])
@@ -489,17 +498,19 @@ def ciclo_de_busca(perfil: Perfil):
             # A descrição é enriquecida para vagas que passaram no título e para
             # candidatas recuperadas pelo conteúdo, limitando requisições extras.
             # Sem descrição suficiente, o score é limitado e a incerteza fica explícita.
+            ids_recuperadas_por_descricao = {v.id for v in vagas_recuperadas_descricao}
             for vaga_avaliada in vagas_filtradas:
-                _enriquecer_e_pontuar(vaga_avaliada, cache_descricoes)
-                auditoria.contar("avaliadas_compatibilidade")
-                if vaga_avaliada.status_extracao == "completa":
-                    auditoria.contar("descricao_completa")
-                else:
-                    auditoria.contar("descricao_insuficiente")
-                auditoria.registrar(
-                    vaga_avaliada, "avaliada_compatibilidade",
-                    vaga_avaliada.compatibilidade_justificativa
-                )
+                if vaga_avaliada.id not in ids_recuperadas_por_descricao:
+                    _enriquecer_e_pontuar(vaga_avaliada, cache_descricoes)
+                    auditoria.contar("avaliadas_compatibilidade")
+                    if vaga_avaliada.status_extracao == "completa":
+                        auditoria.contar("descricao_completa")
+                    else:
+                        auditoria.contar("descricao_insuficiente")
+                    auditoria.registrar(
+                        vaga_avaliada, "avaliada_compatibilidade",
+                        vaga_avaliada.compatibilidade_justificativa
+                    )
                 logger.info(
                     f"[{perfil.nome}] Compatibilidade {vaga_avaliada.compatibilidade_score}/100 "
                     f"({vaga_avaliada.status_extracao}) — {vaga_avaliada.titulo} | "
