@@ -8,7 +8,7 @@
 ![SQLite](https://img.shields.io/badge/SQLite-Banco%20versionado-07405E?style=for-the-badge&logo=sqlite&logoColor=white)
 ![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-Cron-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)
 ![Tests](https://img.shields.io/badge/testes-automatizados-informational?style=for-the-badge)
-![Status](https://img.shields.io/badge/status-em%20produção-success?style=for-the-badge)
+![Status](https://img.shields.io/badge/status-em%20revis%C3%A3o-informational?style=for-the-badge)
 
 **Autora:** Liliam Kezia Oliveira Souza
 
@@ -217,7 +217,7 @@ Os títulos são específicos; palavras isoladas como “analista”, “suporte
 ## Extração, compatibilidade e auditoria do funil
 
 - **Descrição:** Gupy e Sólides usam o texto já disponível no payload quando existe. Para demais anúncios, o extrator tenta JSON-LD `JobPosting`, metadados de descrição, texto HTML visível e, como fallback, conteúdo renderizado via Playwright. Redirecionamentos são seguidos; HTTP, timeout e estrutura sem descrição ficam registrados como erro/estado de extração.
-- **Estado explícito:** `completa` exige pelo menos 180 caracteres de conteúdo; textos curtos são `incompleta`; páginas sem texto útil são `indisponivel`. Responsabilidades e requisitos são separados quando os cabeçalhos podem ser reconhecidos. O texto original normalizado é preservado para avaliação.
+- **Estado explícito:** `completa` exige pelo menos 180 caracteres de conteúdo; textos curtos são `incompleta`; páginas sem texto útil são `indisponivel`. Responsabilidades e requisitos são separados quando os cabeçalhos podem ser reconhecidos; ferramentas citadas e senioridade explícita também são extraídas. A modalidade declarada na descrição pode corrigir um card contraditório. O texto original normalizado é preservado para avaliação.
 - **Segunda chance por conteúdo:** vagas do perfil Brasil que são explicitamente remotas e passam a localização, mas não passam pelo título, podem ser avaliadas pela descrição. Só são recuperadas com descrição completa, evidência de família profissional e score acima do limiar.
 - **Escopo Brasil:** o perfil Brasil descarta modalidade que não esteja confirmada como `Remoto`; cidade ou nome da empresa não substituem confirmação de trabalho 100% remoto. A janela de publicação verificável continua em cinco dias.
 - **Score:** `core/compatibilidade.py` usa pesos configuráveis e produz pontuação 0–100, critérios positivos, lacunas, requisitos obrigatórios sinalizados e aviso de informação insuficiente. O limiar inicial é 55/100; não é uma probabilidade de contratação.
