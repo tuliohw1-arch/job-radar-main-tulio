@@ -218,3 +218,30 @@ def test_modalidade_da_descricao_complementa_e_pode_contradizer_o_card():
         descricao="This is a hybrid role with three days in the office.",
     )
     assert hibrido.modalidade == "Híbrido"
+
+
+
+def test_modalidade_hibrida_da_pagina_substitui_card_remoto_no_enriquecimento(monkeypatch):
+    import main
+
+    descricao = (
+        "Responsibilities: support operations and reporting. "
+        "This is a hybrid role requiring three days in the office. "
+    ) * 4
+    monkeypatch.setattr(main, "extrair_descricao", lambda url: {
+        "descricao": descricao,
+        "status_extracao": "completa",
+        "origem_descricao": "html_visivel",
+        "erro_extracao": "",
+        "url_final": url,
+    })
+    job = Job(
+        titulo="Analista de Operações Júnior",
+        empresa="Empresa",
+        local="Remote - Brazil",
+        link="https://example.com/hybrid-role",
+        site="Teste",
+        modalidade="Remoto",
+    )
+    main._enriquecer_e_pontuar(job, {})
+    assert job.modalidade == "Híbrido"
