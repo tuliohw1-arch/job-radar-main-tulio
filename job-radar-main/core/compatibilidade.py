@@ -94,7 +94,8 @@ def pontuar_compatibilidade(job) -> dict:
     local = _normalizar(getattr(job, "local", ""))
     remoto = any(t in modalidade for t in ("remoto", "remote", "home office"))
     brasil = any(t in local for t in ("brasil", "brazil", "br"))
-    if remoto and (brasil or not local or "nao informado" in local):
+    # O filtro de elegibilidade geográfica já foi aplicado antes deste scorer.
+    if remoto:
         score += pesos["remoto_brasil"]
         detalhes.append("Modalidade remota informada; escopo Brasil aceito pelo filtro anterior.")
     else:
