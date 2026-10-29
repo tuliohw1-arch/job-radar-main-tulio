@@ -130,6 +130,42 @@ def _extrair_meta_e_jsonld(html: str) -> tuple[str, str]:
     return "", ""
 
 
+FERRAMENTAS_RECONHECIDAS = (
+    "Power BI", "Power Query", "Excel", "Google Sheets", "Jira", "HubSpot",
+    "Salesforce", "RD Station", "Tableau", "Looker", "SQL", "Python",
+    "AWS", "Azure", "Zendesk", "ServiceNow", "Freshdesk", "Intercom",
+    "SAP", "Oracle", "DAX", "Google Analytics", "Metabase", "Qlik Sense",
+)
+
+
+def extrair_ferramentas(texto: str) -> list[str]:
+    """Extrai ferramentas citadas na vaga; não afirma proficiência do candidato."""
+    normal = normalizar_texto(texto)
+    encontradas = []
+    for ferramenta in FERRAMENTAS_RECONHECIDAS:
+        if re.search(r"(?<!\\w)" + re.escape(ferramenta) + r"(?!\\w)", normal, re.IGNORECASE):
+            encontradas.append(ferramenta)
+    return encontradas
+
+
+def detectar_senioridade(texto: str) -> str:
+    """Extrai senioridade textual quando explícita; vazio significa não identificada."""
+    normal = normalizar_texto(texto).casefold()
+    if re.search(r"\\b(estagio|estagiario|trainee|internship)\\b", normal):
+        return "Estágio/Trainee"
+    if re.search(r"\\b(junior|jr\\.?|entry.level|entry level)\\b", normal):
+        return "Júnior"
+    if re.search(r"\\b(pleno|mid.level|mid level)\\b", normal):
+        return "Pleno"
+    if re.search(r"\\b(especialista|specialist|principal)\\b", normal):
+        return "Especialista"
+    if re.search(r"\\b(lead|lider|lideranca|manager|head|coordenador|coordenacao|director|diretor)\\b", normal):
+        return "Liderança"
+    if re.search(r"\\b(senior|sr\\.?)\\b", normal):
+        return "Sênior"
+    return ""
+
+
 def analisar_secoes(descricao: str) -> dict[str, list[str]]:
     """Separa seções por cabeçalhos; preserva o texto integral em descricao."""
     secoes = {
