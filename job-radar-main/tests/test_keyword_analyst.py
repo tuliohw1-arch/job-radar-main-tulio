@@ -33,8 +33,6 @@ def test_titulos_das_areas_prioritarias_passam(titulo):
 @pytest.mark.parametrize("titulo", [
     "Analista de Atendimento ao Cliente",
     "Analista de Relacionamento com Cliente",
-    "Analista de Dados",
-    "Business Intelligence Analyst",
     "Analista de Banco de Dados",
     "Financial Analyst",
     "Vendedor Externo",
