@@ -462,6 +462,25 @@ def ciclo_de_busca(perfil: Perfil):
             if perfil.chave == "brasil":
                 remotas_confirmadas = []
                 for vaga_modalidade in vagas_para_avaliar:
+                    # Se a fonte não informou modalidade, tente descobrir pelo
+                    # corpo do anúncio antes de rejeitar. Modalidade híbrida/
+                    # presencial explícita não dispara requisição extra.
+                    if not (vaga_modalidade.modalidade or "").strip():
+                        chave_descricao = (vaga_modalidade.link or "").split("#", 1)[0]
+                        resultado_descricao = cache_descricoes.get(chave_descricao)
+                        if resultado_descricao is None:
+                            resultado_descricao = extrair_descricao(vaga_modalidade.link)
+                            cache_descricoes[chave_descricao] = resultado_descricao
+                        if resultado_descricao.get("descricao"):
+                            vaga_modalidade.descricao = resultado_descricao["descricao"]
+                            vaga_modalidade.origem_descricao = resultado_descricao.get("origem_descricao", "")
+                            vaga_modalidade.status_extracao = resultado_descricao.get("status_extracao", "indisponivel")
+                            vaga_modalidade.erro_extracao = resultado_descricao.get("erro_extracao", "")
+                            vaga_modalidade.__post_init__()
+                        auditoria.registrar(
+                            vaga_modalidade, "verificacao_modalidade_descricao",
+                            resultado_descricao.get("erro_extracao", "") or "modalidade conferida na descrição"
+                        )
                     if (vaga_modalidade.modalidade or "").strip().casefold() == "remoto":
                         remotas_confirmadas.append(vaga_modalidade)
                     else:
