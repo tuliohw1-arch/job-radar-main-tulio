@@ -2,7 +2,7 @@
 import requests
 
 from core.compatibilidade import LIMIAR_COMPATIBILIDADE_MINIMA, pontuar_compatibilidade
-from core.descricao import extrair_descricao, analisar_secoes
+from core.descricao import detectar_senioridade, extrair_descricao, extrair_ferramentas, analisar_secoes
 from core.job import Job
 
 
@@ -188,3 +188,33 @@ def test_helper_integrado_enriquece_job_e_grava_score_explicavel():
     assert job.compatibilidade_justificativa
     assert job.compatibilidade_criterios
     assert isinstance(job.compatibilidade_lacunas, list)
+
+
+
+def test_extrai_ferramentas_e_senioridade_sem_inferir_proficiencia_do_candidato():
+    ferramentas = extrair_ferramentas("Requisitos: Excel, Power BI, Jira e SQL.")
+    assert {"Excel", "Power BI", "Jira", "SQL"}.issubset(set(ferramentas))
+    assert detectar_senioridade("A oportunidade é para perfil júnior.") == "Júnior"
+
+
+def test_modalidade_da_descricao_complementa_e_pode_contradizer_o_card():
+    remoto = Job(
+        titulo="Analista de Operações",
+        empresa="Empresa",
+        local="Brasil",
+        link="https://example.com/remote",
+        site="Teste",
+        descricao="This is a fully remote role with responsibilities in operations.",
+    )
+    assert remoto.modalidade == "Remoto"
+
+    hibrido = Job(
+        titulo="Analista de Operações",
+        empresa="Empresa",
+        local="Brasil",
+        link="https://example.com/hybrid",
+        site="Teste",
+        modalidade="Remoto",
+        descricao="This is a hybrid role with three days in the office.",
+    )
+    assert hibrido.modalidade == "Híbrido"
