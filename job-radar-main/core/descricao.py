@@ -200,8 +200,12 @@ def extrair_descricao(url: str, session=None, renderizar_dinamico: bool = True) 
         if descricao:
             resultado["descricao"] = normalizar_texto(descricao)
             resultado["origem_descricao"] = origem
+            # Meta description é um resumo de SEO, não evidência de corpo
+            # integral da vaga; nunca promovê-la sozinha a "completa".
             resultado["status_extracao"] = (
-                "completa" if len(resultado["descricao"]) >= MIN_CHARS_DESCRICAO else "incompleta"
+                "completa"
+                if len(resultado["descricao"]) >= MIN_CHARS_DESCRICAO and origem != "meta"
+                else "incompleta"
             )
         else:
             resultado["erro_extracao"] = "descricao_nao_encontrada_ou_curta"
