@@ -94,7 +94,7 @@ Vaga de alta relevância chega na hora, com nível, data de publicação e link.
 |---|---|
 | **Busca** | Varre as fontes em paralelo, com rodízio de termos para controlar custo por ciclo |
 | **Filtra** | Cargo (forte / ambíguo + qualificador / ferramenta + cargo), cidade ou mercado remoto, idioma |
-| **Pontua** | Score 1–10 por vaga: cargo, ferramenta, senioridade, mercado, idioma — soma de sinais, sem IA |
+| **Pontua** | Compatibilidade 0–100 baseada na descrição e no perfil; score histórico 0–10 permanece apenas para ordenação visual e encaminhamento ao digest |
 | **Deduplica** | Por link e por empresa+título, para pegar a mesma vaga republicada em fonte diferente |
 | **Notifica** | Alta relevância na hora; o resto num resumo diário ranqueado, melhor vaga no topo |
 | **Aprende** | Botão 👍/👎 em cada notificação — feedback vira dado para medir precisão por fonte e por semana |
@@ -116,7 +116,7 @@ O filtro existe para uma busca específica, e as regras estão explícitas em `c
 - **Híbrido e presencial:** sempre rejeitados, inclusive em Belo Horizonte.
 - **Internacional:** o workflow não executa o perfil internacional; vagas com escopo explícito fora do Brasil ou sem escopo confirmado são rejeitadas.
 - **Taxonomia de carreira (Brasil):** grupos A — CRM/CRM Operations/CS Ops (40%), B — Business Operations/Sales Ops/RevOps/implantação/onboarding (40%) e C — Marketing Operations/automação/suporte SaaS (20%). Os pesos são uma proposta de priorização, não probabilidades de contratação.
-- **Compatibilidade:** CRM/CRM Operations é prioridade; CS Ops e operações adjacentes entram por títulos específicos. Vagas abaixo de 7/10 são descartadas, não enviadas ao digest.
+- **Compatibilidade:** CRM/CRM Operations é prioridade; CS Ops e operações adjacentes entram por títulos específicos. Vagas abaixo de 55/100 de compatibilidade são descartadas; o score histórico 0–10 não é o filtro eliminatório.
 
 Cidade homônima é tratada: `Campina Grande do Sul, Paraná` e `Fortaleza de Minas, Minas Gerais` são barradas pela conferência de UF, que entende tanto a sigla quanto o estado por extenso.
 
