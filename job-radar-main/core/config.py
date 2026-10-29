@@ -204,9 +204,80 @@ KEYWORDS_MARKETING_OPERATIONS = [
 # 4) CRM adjacente: retenção, jornada e automação de marketing.
 KEYWORDS_RELACIONAMENTO_ATENDIMENTO = KEYWORDS_OPERACOES_CLIENTE
 
+
+# Famílias adicionais explicitamente solicitadas para ampliar a busca além de CRM/CX.
+# Mantemos títulos específicos para não transformar palavras genéricas ("analista",
+# "suporte", "dados") em critérios de aprovação.
+KEYWORDS_SUPORTE_OPERACOES_TI = [
+    "Analista de TI Júnior", "Analista de TI Junior", "Analista TI Jr",
+    "IT Analyst Junior", "Junior IT Analyst", "IT Support Analyst Jr",
+    "Analista de Suporte Júnior", "Analista de Suporte Junior",
+    "Analista de Suporte Jr", "Analista de Suporte Técnico Júnior",
+    "Analista de Suporte Tecnico Junior", "Analista de Suporte Técnico Jr",
+    "Analista de Service Desk Júnior", "Analista de Service Desk Junior",
+    "Service Desk Analyst Jr", "Junior Service Desk Analyst",
+    "Analista de Operações de TI Júnior", "Analista de Operacoes de TI Junior",
+    "IT Operations Analyst Jr", "Junior IT Operations Analyst",
+    "Analista de Suporte a Sistemas", "Systems Support Analyst",
+    "Analista de Implantação de Sistemas Júnior",
+    "Analista de Implantacao de Sistemas Junior",
+    "Junior Systems Implementation Analyst",
+    "Analista de Sistemas Júnior", "Analista de Sistemas Junior",
+    "Junior Systems Analyst", "Técnico de Suporte Remoto",
+    "Tecnico de Suporte Remoto", "Remote Technical Support",
+]
+
+KEYWORDS_OPERACOES_PROCESSOS_PROJETOS = [
+    "Analista de Operações Júnior", "Analista de Operacoes Junior",
+    "Junior Operations Analyst", "Operations Analyst Jr",
+    "Analista de Processos Júnior", "Analista de Processos Junior",
+    "Junior Process Analyst", "Process Analyst Jr",
+    "Analista de Operações de Negócio Júnior",
+    "Analista de Operacoes de Negocio Junior",
+    "Business Operations Analyst Jr", "Junior Business Operations Analyst",
+    "Analista de Projetos Júnior", "Analista de Projetos Junior",
+    "Junior Project Analyst", "Project Analyst Jr",
+    "Assistente de Projetos", "Project Assistant",
+    "Analista de PMO Júnior", "Analista de PMO Junior", "Junior PMO Analyst",
+    "Analista de Implantação Júnior", "Analista de Implantacao Junior",
+    "Implementation Analyst Jr", "Junior Implementation Analyst",
+    "Analista de Requisitos Júnior", "Analista de Requisitos Junior",
+    "Junior Requirements Analyst", "Requirements Analyst Jr",
+]
+
+KEYWORDS_CUSTOMER_SUCCESS_COMPLEMENTAR = [
+    "Customer Operations", "Customer Operations Analyst",
+    "Analista de Onboarding Júnior", "Analista de Onboarding Junior",
+    "Junior Onboarding Analyst", "Analista de Implantação de Clientes",
+    "Analista de Implantacao de Clientes", "Customer Implementation Analyst",
+    "Analista de Customer Experience Júnior", "Analista de Customer Experience Junior",
+    "Customer Experience Analyst Jr", "Junior Customer Experience Analyst",
+    "Analista de Atendimento ao Cliente Júnior",
+    "Analista de Atendimento ao Cliente Junior",
+    "Customer Support Analyst Jr", "Junior Customer Support Analyst",
+    "Analista de Qualidade de Atendimento", "Customer Service Quality Analyst",
+]
+
+KEYWORDS_DADOS_BI = [
+    "Analista de Indicadores", "KPI Analyst", "Operations Metrics Analyst",
+    "Analista de Dados Júnior", "Analista de Dados Junior",
+    "Analista de Dados Jr", "Junior Data Analyst", "Data Analyst Jr",
+    "Data Analyst Junior", "Analista de BI Júnior", "Analista de BI Junior",
+    "BI Analyst Jr", "BI Analyst Junior", "Junior BI Analyst",
+    "Assistente de BI", "BI Assistant", "Analista de Relatórios",
+    "Reporting Analyst", "Analista de Performance Operacional",
+    "Operational Performance Analyst", "Analista de Dados de Clientes Júnior",
+    "Analista de Dados de Clientes Junior", "Junior Customer Data Analyst",
+]
+
+
 # Todos os títulos inequívocos aceitos pelo filtro.
 KEYWORDS_CARGO_FORTE += (
-    KEYWORDS_CUSTOMER_SUCCESS_CX
+    KEYWORDS_SUPORTE_OPERACOES_TI
+    + KEYWORDS_OPERACOES_PROCESSOS_PROJETOS
+    + KEYWORDS_CUSTOMER_SUCCESS_COMPLEMENTAR
+    + KEYWORDS_DADOS_BI
+    +     KEYWORDS_CUSTOMER_SUCCESS_CX
     + KEYWORDS_RELACIONAMENTO_ATENDIMENTO
     + KEYWORDS_OPERACOES_COMERCIAIS
     + KEYWORDS_MARKETING_OPERATIONS
@@ -255,6 +326,14 @@ PRIORIDADES_CARGO = {
     **{cargo: 2 for cargo in KEYWORDS_CUSTOMER_SUCCESS_CX},
     **{cargo: 1 for cargo in KEYWORDS_RELACIONAMENTO_ATENDIMENTO},
 }
+# Pontuação por família para as novas áreas ponte; CRM continua no topo.
+PRIORIDADES_CARGO.update({
+    **{cargo: 2 for cargo in KEYWORDS_SUPORTE_OPERACOES_TI},
+    **{cargo: 2 for cargo in KEYWORDS_OPERACOES_PROCESSOS_PROJETOS},
+    **{cargo: 2 for cargo in KEYWORDS_DADOS_BI},
+    **{cargo: 1 for cargo in KEYWORDS_CUSTOMER_SUCCESS_COMPLEMENTAR},
+})
+
 # Taxonomia de busca do perfil Brasil. Os pesos expressam prioridade operacional,
 # não probabilidade estatística de contratação. O filtro remoto e a data
 # verificável continuam sendo critérios eliminatórios independentes.
@@ -272,7 +351,7 @@ GRUPOS_CARGOS = {
     "B": {
         "nome": "Ponte para CRM",
         "peso": 40,
-        "keywords": KEYWORDS_OPERACOES_COMERCIAIS + [
+        "keywords": KEYWORDS_SUPORTE_OPERACOES_TI + KEYWORDS_OPERACOES_PROCESSOS_PROJETOS + KEYWORDS_DADOS_BI + KEYWORDS_CUSTOMER_SUCCESS_COMPLEMENTAR + KEYWORDS_OPERACOES_COMERCIAIS + [
             "Analista de Implantação", "Implementation Analyst",
             "Implementation Specialist", "Customer Onboarding Specialist",
             "Customer Onboarding Analyst", "Customer Operations Analyst",
@@ -481,6 +560,14 @@ TERMOS_PRIORITARIOS = [
     "sales operations",
     "revops",
     "marketing operations",
+    "analista de suporte junior",
+    "analista de service desk junior",
+    "analista de operacoes junior",
+    "analista de processos junior",
+    "analista de dados junior",
+    "analista de bi junior",
+    "junior data analyst",
+    "project assistant",
 ]
 
 # Medido: os TERMOS_BUSCA inteiros (hoje 42) rodando em TODO ciclo é o que
