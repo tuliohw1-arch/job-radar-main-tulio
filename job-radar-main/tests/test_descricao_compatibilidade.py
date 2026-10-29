@@ -174,3 +174,17 @@ def test_fallback_playwright_captura_conteudo_renderizado(monkeypatch):
     assert resultado["status_extracao"] == "completa"
     assert resultado["origem_descricao"] == "playwright_visivel"
     assert resultado["url_final"] == "https://example.com/final"
+
+
+
+def test_helper_integrado_enriquece_job_e_grava_score_explicável():
+    from main import _enriquecer_e_pontuar
+
+    job = _job()
+    job.origem_descricao = "payload_teste"
+    _enriquecer_e_pontuar(job, {})
+    assert job.status_extracao == "completa"
+    assert 0 <= job.compatibilidade_score <= 100
+    assert job.compatibilidade_justificativa
+    assert job.compatibilidade_criterios
+    assert isinstance(job.compatibilidade_lacunas, list)
