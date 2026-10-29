@@ -66,3 +66,89 @@ def test_ida_e_volta_teclado_para_parser():
 
     assert _parsear_callback_data(botao_positivo["callback_data"]) == (_ID_EXEMPLO, "positivo")
     assert _parsear_callback_data(botao_negativo["callback_data"]) == (_ID_EXEMPLO, "negativo")
+
+
+
+class _RespostaTelegramFake:
+    def __init__(self, status=200, body=None, headers=None):
+        self.status_code = status
+        self.reason = "simulated"
+        self.headers = headers or {}
+        self._body = body or {"ok": True}
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            erro = __import__("requests").HTTPError("simulated")
+            erro.response = self
+            raise erro
+
+    def json(self):
+        return self._body
+
+
+def test_enviar_mensagem_telegram_simulado_com_sucesso(monkeypatch):
+    import notifier.telegram as telegram
+
+    chamadas = []
+    monkeypatch.setattr(telegram, "TELEGRAM_BOT_TOKEN", "fake-token")
+    monkeypatch.setattr(telegram, "TELEGRAM_CHAT_ID", "fake-chat")
+    monkeypatch.setattr(telegram.requests, "post", lambda *a, **k: (chamadas.append((a, k)) or _RespostaTelegramFake()))
+    assert telegram.enviar_mensagem("mensagem de teste simulada") is True
+    assert len(chamadas) == 1
+    assert "fake-token" in chamadas[0][0][0]  # token apenas na URL enviada, nunca no log
+
+
+def test_enviar_mensagem_re tenta_apos_rate_limit_e_respeita_resposta(monkeypatch):
+    import notifier.telegram as telegram
+
+    respostas = iter([
+        _RespostaTelegramFake(429, {"ok": False}, {"Retry-After": "1"}),
+        _RespostaTelegramFake(200, {"ok": True}),
+    ])
+    chamadas = []
+    monkeypatch.setattr(telegram, "TELEGRAM_BOT_TOKEN", "fake-token")
+    monkeypatch.setattr(telegram, "TELEGRAM_CHAT_ID", "fake-chat")
+    monkeypatch.setattr(telegram.requests, "post", lambda *a, **k: (chamadas.append(1) or next(respostas)))
+    monkeypatch.setattr(telegram.time, "sleep", lambda *_: None)
+    assert telegram.enviar_mensagem("mensagem de teste simulada") is True
+    assert len(chamadas) == 2
+
+
+def test_enviar_mensagem_timeout_nao_repete_envio_ambiguo(monkeypatch):
+    import requests
+    import notifier.telegram as telegram
+
+    chamadas = []
+    def falha(*args, **kwargs):
+        chamadas.append(1)
+        raise requests.Timeout()
+    monkeypatch.setattr(telegram, "TELEGRAM_BOT_TOKEN", "fake-token")
+    monkeypatch.setattr(telegram, "TELEGRAM_CHAT_ID", "fake-chat")
+    monkeypatch.setattr(telegram.requests, "post", falha)
+    assert telegram.enviar_mensagem("mensagem de teste simulada") is False
+    assert len(chamadas) == 1
+
+
+def test_notificacao_inclui_score_0_a_100_e_status_da_descricao(monkeypatch):
+    import notifier.telegram as telegram
+    from core.job import Job
+
+    mensagens = []
+    monkeypatch.setattr(telegram, "enviar_mensagem", lambda texto, reply_markup=None: (mensagens.append(texto) or True))
+    job = Job(
+        titulo="Analista de CRM Júnior",
+        empresa="Empresa Teste",
+        local="Brasil",
+        link="https://example.com/job",
+        site="Gupy",
+        modalidade="Remoto",
+        publicado_em="2026-10-28",
+        relevancia=8,
+        motivo="Cargo forte",
+        compatibilidade_score=82,
+        compatibilidade_justificativa="CRM e operações alinhados",
+        status_extracao="completa",
+    )
+    assert telegram.notificar_vaga(job) is True
+    assert "Compatibilidade:</b> 82/100" in mensagens[0]
+    assert "Descrição:</b> completa" in mensagens[0]
