@@ -177,7 +177,7 @@ def test_fallback_playwright_captura_conteudo_renderizado(monkeypatch):
 
 
 
-def test_helper_integrado_enriquece_job_e_grava_score_explicável():
+def test_helper_integrado_enriquece_job_e_grava_score_explicavel():
     from main import _enriquecer_e_pontuar
 
     job = _job()
