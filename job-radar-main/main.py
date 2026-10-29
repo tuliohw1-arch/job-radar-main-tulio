@@ -412,7 +412,23 @@ def ciclo_de_busca(perfil: Perfil):
                         f"[{perfil.nome}] {descartadas_recencia} vaga(s) descartada(s) "
                         "por data ausente, ambígua, futura ou anterior aos últimos 5 dias."
                     )
+            # O perfil Brasil é estritamente remoto: cidade de contratação
+            # por si só não torna uma vaga elegível para este radar.
+            if perfil.chave == "brasil":
+                remotas_confirmadas = []
+                for vaga_modalidade in vagas_para_avaliar:
+                    if (vaga_modalidade.modalidade or "").strip().casefold() == "remoto":
+                        remotas_confirmadas.append(vaga_modalidade)
+                    else:
+                        auditoria.contar("descartadas_modalidade_local")
+                        auditoria.registrar(
+                            vaga_modalidade, "rejeitada_modalidade",
+                            "modalidade não confirmada como 100% remota"
+                        )
+                vagas_para_avaliar = remotas_confirmadas
+
             vagas_filtradas, descartes = filtrar_vagas(vagas_para_avaliar, perfil.regras)
+            auditoria.contar(f"brutas_fonte_{nome}", len(vagas))
             auditoria.contar("avaliadas_filtro", len(vagas_para_avaliar))
             ids_aceitas_filtro = {v.id for v in vagas_filtradas}
             for job_candidato in vagas_para_avaliar:
@@ -428,14 +444,50 @@ def ciclo_de_busca(perfil: Perfil):
             descartes_escopo_ciclo.update(descartes)
 
             ids_aprovadas = {v.id for v in vagas_filtradas}
+            candidatas_descricao = [
+                v for v in vagas_para_avaliar
+                if v.id not in ids_aprovadas and v.rejeitada_so_pelo_cargo(perfil.regras)
+            ]
             titulo_barrou_em_cidade.extend(
                 f"{v.titulo} — {v.empresa} ({v.local})"
-                for v in vagas_para_avaliar
-                if v.id not in ids_aprovadas and v.rejeitada_so_pelo_cargo(perfil.regras)
+                for v in candidatas_descricao
             )
 
-            # A descrição é enriquecida somente para vagas que já passaram
-            # nos gates de cargo/localização, limitando requisições extras.
+            # Segunda chance baseada no conteúdo: só abre a página de anúncios
+            # remotos no escopo elegível que falharam exclusivamente pelo título.
+            # Exige descrição completa, score suficiente e evidência textual da
+            # família profissional; isso evita aceitar vagas por palavras vagas.
+            vagas_recuperadas_descricao = []
+            for vaga_por_descricao in candidatas_descricao:
+                _enriquecer_e_pontuar(vaga_por_descricao, cache_descricoes)
+                familia_comprovada = any(
+                    str(criterio).startswith("Família de cargo alinhada")
+                    for criterio in (vaga_por_descricao.compatibilidade_criterios or [])
+                )
+                if (
+                    vaga_por_descricao.status_extracao == "completa"
+                    and familia_comprovada
+                    and vaga_por_descricao.compatibilidade_score >= LIMIAR_COMPATIBILIDADE_MINIMA
+                ):
+                    vaga_por_descricao.relevancia = max(
+                        vaga_por_descricao.pontuar_relevancia(perfil.regras), 7
+                    )
+                    vaga_por_descricao.motivo = "Descrição alinhada às áreas-alvo"
+                    vagas_filtradas.append(vaga_por_descricao)
+                    auditoria.contar("recuperadas_por_descricao")
+                    auditoria.registrar(
+                        vaga_por_descricao, "aprovada_por_descricao",
+                        vaga_por_descricao.compatibilidade_justificativa
+                    )
+                else:
+                    auditoria.contar("rejeitadas_por_descricao")
+                    auditoria.registrar(
+                        vaga_por_descricao, "rejeitada_por_descricao",
+                        "descrição insuficiente, sem família alinhada ou score abaixo do limiar"
+                    )
+
+            # A descrição é enriquecida para vagas que passaram no título e para
+            # candidatas recuperadas pelo conteúdo, limitando requisições extras.
             # Sem descrição suficiente, o score é limitado e a incerteza fica explícita.
             for vaga_avaliada in vagas_filtradas:
                 _enriquecer_e_pontuar(vaga_avaliada, cache_descricoes)
