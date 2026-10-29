@@ -269,3 +269,16 @@ def test_heartbeat_so_marca_data_quando_telegram_confirma_envio(monkeypatch):
     main._enviar_heartbeat_diario(PERFIL_BR, 0, [], 3)
     assert estado["tentativas"] == 2
     assert estado["metadados"][f"heartbeat_ultimo_dia_{PERFIL_BR.chave}"]
+
+
+
+def test_digest_mostra_score_de_compatibilidade_quando_disponivel():
+    from notifier.telegram import montar_digest
+
+    mensagens = montar_digest(
+        [("Analista de CRM Jr", "Empresa", "https://example.com/1", 8, 0, 82)],
+        "Brasil",
+    )
+    assert len(mensagens) == 1
+    assert "82/100" in mensagens[0]
+    assert "Analista de CRM Jr" in mensagens[0]
