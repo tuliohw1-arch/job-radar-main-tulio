@@ -8,6 +8,7 @@ from __future__ import annotations
 from html.parser import HTMLParser
 import json
 import re
+import unicodedata
 from typing import Any
 
 import requests
@@ -151,6 +152,10 @@ def extrair_ferramentas(texto: str) -> list[str]:
 def detectar_senioridade(texto: str) -> str:
     """Extrai senioridade textual quando explícita; vazio significa não identificada."""
     normal = normalizar_texto(texto).casefold()
+    normal = "".join(
+        caractere for caractere in unicodedata.normalize("NFKD", normal)
+        if not unicodedata.combining(caractere)
+    )
     if re.search(r"\b(estagio|estagiario|trainee|internship)\b", normal):
         return "Estágio/Trainee"
     if re.search(r"\b(junior|jr\.?|entry.level|entry level)\b", normal):
