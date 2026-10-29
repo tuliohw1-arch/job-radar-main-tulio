@@ -137,3 +137,40 @@ def test_sql_obrigatorio_e_registrado_como_lacuna_nao_como_competencia_comprovad
     resultado = pontuar_compatibilidade(job)
     assert resultado["requisitos_obrigatorios_nao_atendidos"]
     assert any("SQL" in item for item in resultado["requisitos_obrigatorios_nao_atendidos"])
+
+
+
+def test_fallback_playwright_captura_conteudo_renderizado(monkeypatch):
+    from types import SimpleNamespace
+    import playwright.sync_api
+
+    texto = "Responsabilidades: " + ("acompanhar chamados e relatórios operacionais. " * 12)
+
+    class Page:
+        url = "https://example.com/final"
+        def goto(self, *args, **kwargs):
+            return None
+        def locator(self, *_):
+            return SimpleNamespace(inner_text=lambda **__: texto)
+
+    class Browser:
+        def new_page(self):
+            return Page()
+        def close(self):
+            return None
+
+    class Context:
+        def __enter__(self):
+            return SimpleNamespace(chromium=SimpleNamespace(launch=lambda **__: Browser()))
+        def __exit__(self, *args):
+            return False
+
+    monkeypatch.setattr(playwright.sync_api, "sync_playwright", lambda: Context())
+    resultado = extrair_descricao(
+        "https://example.com/job",
+        session=SessaoFake(RespostaFake("<html><body>conteúdo carregado por JavaScript</body></html>")),
+        renderizar_dinamico=True,
+    )
+    assert resultado["status_extracao"] == "completa"
+    assert resultado["origem_descricao"] == "playwright_visivel"
+    assert resultado["url_final"] == "https://example.com/final"
