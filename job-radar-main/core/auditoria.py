@@ -45,6 +45,17 @@ class AuditoriaCiclo:
             "justificativa_compatibilidade": getattr(job, "compatibilidade_justificativa", ""),
         })
 
+    def registrar_fonte(self, fonte: str, etapa: str, motivo: str = "") -> None:
+        self.eventos.append({
+            "ciclo_id": self.ciclo_id,
+            "perfil": self.perfil,
+            "etapa": etapa,
+            "motivo": motivo,
+            "fonte": fonte,
+            "vaga_id": "",
+            "url": "",
+        })
+
     def finalizar(self) -> dict:
         resumo = {
             "tipo": "resumo_ciclo",
