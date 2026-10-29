@@ -90,6 +90,9 @@ def _enriquecer_e_pontuar(vaga, cache_descricoes: dict[str, dict]) -> None:
         nivel_titulo if nivel_titulo not in ("Não especificado", "")
         else detectar_senioridade(vaga.descricao)
     )
+    # A descrição do anúncio pode contradizer o card; a confirmação final de
+    # modalidade deve ocorrer depois da extração, não apenas no scraper.
+    vaga.__post_init__()
     resultado_score = pontuar_compatibilidade(vaga)
     vaga.compatibilidade_score = resultado_score["score"]
     vaga.compatibilidade_criterios = resultado_score["criterios_positivos"]
@@ -536,8 +539,13 @@ def ciclo_de_busca(perfil: Perfil):
                     str(criterio).startswith("Família de cargo alinhada")
                     for criterio in (vaga_por_descricao.compatibilidade_criterios or [])
                 )
+                modalidade_confirmada = (
+                    perfil.chave != "brasil"
+                    or (vaga_por_descricao.modalidade or "").strip().casefold() == "remoto"
+                )
                 if (
-                    vaga_por_descricao.status_extracao == "completa"
+                    modalidade_confirmada
+                    and vaga_por_descricao.status_extracao == "completa"
                     and familia_comprovada
                     and vaga_por_descricao.compatibilidade_score >= LIMIAR_COMPATIBILIDADE_MINIMA
                 ):
@@ -555,13 +563,14 @@ def ciclo_de_busca(perfil: Perfil):
                     auditoria.contar("rejeitadas_por_descricao")
                     auditoria.registrar(
                         vaga_por_descricao, "rejeitada_por_descricao",
-                        "descrição insuficiente, sem família alinhada ou score abaixo do limiar"
+                        "modalidade contraditória, descrição insuficiente, sem família alinhada ou score abaixo do limiar"
                     )
 
             # A descrição é enriquecida para vagas que passaram no título e para
             # candidatas recuperadas pelo conteúdo, limitando requisições extras.
             # Sem descrição suficiente, o score é limitado e a incerteza fica explícita.
             ids_recuperadas_por_descricao = {v.id for v in vagas_recuperadas_descricao}
+            vagas_modalidade_ok = []
             for vaga_avaliada in vagas_filtradas:
                 if vaga_avaliada.id not in ids_recuperadas_por_descricao:
                     _enriquecer_e_pontuar(vaga_avaliada, cache_descricoes)
@@ -574,11 +583,20 @@ def ciclo_de_busca(perfil: Perfil):
                         vaga_avaliada, "avaliada_compatibilidade",
                         vaga_avaliada.compatibilidade_justificativa
                     )
+                if perfil.chave == "brasil" and (vaga_avaliada.modalidade or "").strip().casefold() != "remoto":
+                    auditoria.contar("descartadas_modalidade_local")
+                    auditoria.registrar(
+                        vaga_avaliada, "rejeitada_modalidade_descricao",
+                        "a descrição contradiz o card: não é 100% remota"
+                    )
+                    continue
+                vagas_modalidade_ok.append(vaga_avaliada)
                 logger.info(
                     f"[{perfil.nome}] Compatibilidade {vaga_avaliada.compatibilidade_score}/100 "
                     f"({vaga_avaliada.status_extracao}) — {vaga_avaliada.titulo} | "
                     f"lacunas: {'; '.join(vaga_avaliada.compatibilidade_lacunas or []) or 'nenhuma'}"
                 )
+            vagas_filtradas = vagas_modalidade_ok
             rejeitadas_score = [
                 v for v in vagas_filtradas
                 if v.compatibilidade_score < LIMIAR_COMPATIBILIDADE_MINIMA
