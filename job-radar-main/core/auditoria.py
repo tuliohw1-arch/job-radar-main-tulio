@@ -35,7 +35,14 @@ class AuditoriaCiclo:
             "publicado_em": getattr(job, "publicado_em", ""),
             "modalidade": getattr(job, "modalidade", ""),
             "status_extracao": getattr(job, "status_extracao", "indisponivel"),
+            "origem_descricao": getattr(job, "origem_descricao", ""),
+            "erro_extracao": getattr(job, "erro_extracao", ""),
+            "descricao_chars": len(getattr(job, "descricao", "") or ""),
             "compatibilidade_score": getattr(job, "compatibilidade_score", 0),
+            "criterios_positivos": getattr(job, "compatibilidade_criterios", []) or [],
+            "lacunas": getattr(job, "compatibilidade_lacunas", []) or [],
+            "requisitos_obrigatorios_nao_atendidos": getattr(job, "compatibilidade_requisitos_nao_atendidos", []) or [],
+            "justificativa_compatibilidade": getattr(job, "compatibilidade_justificativa", ""),
         })
 
     def finalizar(self) -> dict:
