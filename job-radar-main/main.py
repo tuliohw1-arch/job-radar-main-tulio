@@ -380,10 +380,13 @@ def ciclo_de_busca(perfil: Perfil):
         for future in as_completed(futures):
             scraper = futures[future]
             nome = scraper.__class__.__name__
+            auditoria.contar(f"brutas_fonte_{nome}", 0)
 
             try:
                 vagas = future.result()
             except Exception as e:
+                auditoria.contar("falhas_fontes")
+                auditoria.registrar_fonte(nome, "falha_coleta", type(e).__name__)
                 logger.error(f"[{perfil.nome}] Erro no scraper {nome}: {e}")
                 scrapers_com_problema.append(nome)
                 continue
@@ -394,6 +397,8 @@ def ciclo_de_busca(perfil: Perfil):
             # também contamos "0 vaga bruta nessa fonte" como problema, não
             # só exceção.
             if not vagas:
+                auditoria.contar("fontes_sem_resultado")
+                auditoria.registrar_fonte(nome, "coleta_vazia", "fonte não retornou vagas; não confundir com busca comprovadamente vazia")
                 logger.warning(f"[{perfil.nome}] {nome} não retornou nenhuma vaga bruta neste ciclo.")
                 scrapers_com_problema.append(nome)
                 continue
