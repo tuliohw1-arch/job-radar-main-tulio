@@ -178,7 +178,8 @@ def _proximo_bloco_termos(perfil: Perfil) -> list[str]:
 
 
 def _enviar_heartbeat_diario(
-    perfil: Perfil, total_novas: int, scrapers_com_problema: list[str], total_fontes: int
+    perfil: Perfil, total_novas: int, scrapers_com_problema: list[str], total_fontes: int,
+    auditoria: AuditoriaCiclo | None = None,
 ):
     """No máximo 1 mensagem por dia (por perfil) confirmando que o ciclo
     rodou.
@@ -217,7 +218,11 @@ def _enviar_heartbeat_diario(
     )
     if enviado:
         definir_metadado(chave, hoje)
+        if auditoria:
+            auditoria.contar("mensagens_sistema_enviadas")
     else:
+        if auditoria:
+            auditoria.contar("mensagens_sistema_falhas")
         # Não registrar uma tentativa como envio: se o Telegram falhar
         # transitoriamente, o próximo ciclo precisa tentar novamente.
         logger.warning(
@@ -226,7 +231,7 @@ def _enviar_heartbeat_diario(
         )
 
 
-def _enviar_digest_diario(perfil: Perfil):
+def _enviar_digest_diario(perfil: Perfil, auditoria: AuditoriaCiclo | None = None):
     """No máximo 1 digest por dia (por perfil) — ver item 08. Junta tudo
     que ficou digest_pendente=1 desde o último envio (pode ser de vários
     ciclos de 3h) e manda ranqueado, melhor primeiro.
@@ -295,6 +300,9 @@ def _enviar_digest_diario(perfil: Perfil):
         return
 
     if enviar_digest(vagas_pendentes, perfil.nome):
+        if auditoria:
+            auditoria.contar("lotes_digest_enviados")
+            auditoria.contar("vagas_digest_enviadas", len(vagas_pendentes))
         marcar_digest_enviado(perfil.chave)
         definir_metadado(chave, hoje.isoformat())
         logger.info(f"[{perfil.nome}] Digest diário enviado: {len(vagas_pendentes)} vaga(s).")
@@ -599,8 +607,10 @@ def ciclo_de_busca(perfil: Perfil):
                     salvar_vaga(vaga, perfil_chave=perfil.chave)
                     logger.info(f"[{perfil.nome}] Nova vaga: {vaga.titulo} - {vaga.empresa}")
                 else:
-                    salvar_vaga(vaga, perfil_chave=perfil.chave, digest_pendente=True)
                     motivo_digest = "vaga antiga" if vaga.publicacao_antiga else f"relevância {vaga.relevancia}/10"
+                    auditoria.contar("vagas_enfileiradas_digest")
+                    auditoria.registrar(vaga, "enfileirada_digest", motivo_digest)
+                    salvar_vaga(vaga, perfil_chave=perfil.chave, digest_pendente=True)
                     logger.info(
                         f"[{perfil.nome}] Nova vaga (digest, {motivo_digest}): "
                         f"{vaga.titulo} - {vaga.empresa}"
@@ -634,8 +644,10 @@ def ciclo_de_busca(perfil: Perfil):
                         f"{vaga.titulo} - {vaga.empresa}"
                     )
                 else:
-                    salvar_vaga(vaga, perfil_chave=perfil.chave, digest_pendente=True, exploratoria=True)
                     motivo_digest = "vaga antiga" if vaga.publicacao_antiga else f"relevância {vaga.relevancia}/10"
+                    auditoria.contar("vagas_enfileiradas_digest")
+                    auditoria.registrar(vaga, "enfileirada_digest_exploratoria", motivo_digest)
+                    salvar_vaga(vaga, perfil_chave=perfil.chave, digest_pendente=True, exploratoria=True)
                     logger.info(
                         f"[{perfil.nome}] Nova vaga exploratória (digest, {motivo_digest}): "
                         f"{vaga.titulo} - {vaga.empresa}"
@@ -698,23 +710,33 @@ def ciclo_de_busca(perfil: Perfil):
         )
 
     auditoria.contar("novas_registradas", total_novas)
-    resumo = auditoria.finalizar()
+    _enviar_heartbeat_diario(
+        perfil, total_novas, scrapers_com_problema, len(scrapers), auditoria=auditoria
+    )
+    _enviar_digest_diario(perfil, auditoria=auditoria)
+    auditoria.finalizar()
     logger.info(
         f"[{perfil.nome}] Auditoria do funil: coletadas={auditoria.contadores.get('coletadas', 0)}, "
+        f"fontes_brutas={sum(v for k, v in auditoria.contadores.items() if k.startswith('brutas_fonte_'))}, "
         f"descartadas_data={auditoria.contadores.get('descartadas_data', 0)}, "
         f"descartadas_modalidade_local={auditoria.contadores.get('descartadas_modalidade_local', 0)}, "
+        f"descartadas_cargo={auditoria.contadores.get('descartadas_cargo', 0)}, "
         f"descartadas_duplicidade={auditoria.contadores.get('descartadas_duplicidade', 0)}, "
         f"descricao_completa={auditoria.contadores.get('descricao_completa', 0)}, "
         f"descricao_insuficiente={auditoria.contadores.get('descricao_insuficiente', 0)}, "
         f"avaliadas={auditoria.contadores.get('avaliadas_compatibilidade', 0)}, "
         f"aprovadas_score={auditoria.contadores.get('aprovadas_score', 0)}, "
+        f"reprovadas_score={auditoria.contadores.get('reprovadas_score', 0)}, "
+        f"recuperadas_por_descricao={auditoria.contadores.get('recuperadas_por_descricao', 0)}, "
+        f"enfileiradas_digest={auditoria.contadores.get('vagas_enfileiradas_digest', 0)}, "
         f"elegiveis_notificacao={auditoria.contadores.get('elegiveis_notificacao', 0)}, "
         f"notificacoes_enviadas={auditoria.contadores.get('notificacoes_enviadas', 0)}, "
-        f"notificacoes_falhas={auditoria.contadores.get('notificacoes_falhas', 0)}; "
+        f"notificacoes_falhas={auditoria.contadores.get('notificacoes_falhas', 0)}, "
+        f"vagas_digest_enviadas={auditoria.contadores.get('vagas_digest_enviadas', 0)}, "
+        f"lotes_digest_falhos={auditoria.contadores.get('lotes_digest_falhos', 0)}, "
+        f"mensagens_sistema_falhas={auditoria.contadores.get('mensagens_sistema_falhas', 0)}; "
         f"arquivo=data/audit/ciclos.jsonl"
     )
-    _enviar_heartbeat_diario(perfil, total_novas, scrapers_com_problema, len(scrapers))
-    _enviar_digest_diario(perfil)
 
 
 def _rodar_um_ciclo_de_cada(perfis: list[Perfil]):
