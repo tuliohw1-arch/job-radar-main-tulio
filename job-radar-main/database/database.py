@@ -311,10 +311,10 @@ def obter_vagas_pendentes_digest(perfil_chave: str) -> list[tuple]:
     with _conectar() as conn:
         cursor = conn.execute(
             """
-            SELECT titulo, empresa, link, relevancia, exploratoria
+            SELECT titulo, empresa, link, relevancia, exploratoria, compatibilidade_score
             FROM vagas_vistas
             WHERE perfil = ? AND digest_pendente = 1
-            ORDER BY relevancia DESC, encontrada_em ASC
+            ORDER BY compatibilidade_score DESC, relevancia DESC, encontrada_em ASC
             """,
             (perfil_chave,),
         )
