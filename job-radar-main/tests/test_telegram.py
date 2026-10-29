@@ -98,7 +98,7 @@ def test_enviar_mensagem_telegram_simulado_com_sucesso(monkeypatch):
     assert "fake-token" in chamadas[0][0][0]  # token apenas na URL enviada, nunca no log
 
 
-def test_enviar_mensagem_re tenta_apos_rate_limit_e_respeita_resposta(monkeypatch):
+def test_enviar_mensagem_reintenta_apos_rate_limit_e_respeita_resposta(monkeypatch):
     import notifier.telegram as telegram
 
     respostas = iter([
