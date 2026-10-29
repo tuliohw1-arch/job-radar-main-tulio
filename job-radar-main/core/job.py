@@ -1150,6 +1150,20 @@ class Job:
     # relevancia — "" até lá. Só pra aparecer na notificação; não
     # influencia filtro nem score.
     motivo: str = ""
+    # Dados enriquecidos sem inferência: texto integral, secções e proveniência.
+    descricao: str = ""
+    responsabilidades: list[str] = None
+    requisitos_obrigatorios: list[str] = None
+    requisitos_desejaveis: list[str] = None
+    origem_descricao: str = ""
+    status_extracao: str = "indisponivel"
+    erro_extracao: str = ""
+    compatibilidade_score: int = 0
+    compatibilidade_criterios: list[str] = None
+    compatibilidade_lacunas: list[str] = None
+    compatibilidade_requisitos_nao_atendidos: list[str] = None
+    compatibilidade_justificativa: str = ""
+    compatibilidade_informacoes_insuficientes: bool = True
 
     def __post_init__(self):
         """Normaliza a modalidade usando indicações de remoto e contradições.
