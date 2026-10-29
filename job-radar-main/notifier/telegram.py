@@ -181,11 +181,17 @@ def montar_digest(vagas: list[tuple], rotulo_perfil: str) -> list[str]:
     ~93% do volume indo pro digest (ver LIMIAR_DIGEST_IMEDIATO em
     config.py), um dia cheio passa fácil dos 4096 caracteres do Telegram
     — quebra em partes numeradas em vez de estourar/truncar."""
-    linhas = [
-        f'{"🧭" if exploratoria else "•"} {_linha_relevancia(relevancia or 0)} '
-        f'<a href="{link}">{titulo}</a> — {empresa}'
-        for titulo, empresa, link, relevancia, exploratoria in vagas
-    ]
+    linhas = []
+    for item in vagas:
+        # Compatibilidade foi adicionada à tupla do SQLite; aceitar também
+        # tuplas antigas de 5 campos mantém testes/dados legados compatíveis.
+        titulo, empresa, link, relevancia, exploratoria = item[:5]
+        compatibilidade = item[5] if len(item) >= 6 else None
+        linha_score = f"🎯 <b>{compatibilidade}/100</b> · " if compatibilidade is not None else ""
+        linhas.append(
+            f'{"🧭" if exploratoria else "•"} {linha_score}{_linha_relevancia(relevancia or 0)} '
+            f'<a href="{link}">{titulo}</a> — {empresa}'
+        )
 
     partes: list[list[str]] = []
     parte_atual: list[str] = []
