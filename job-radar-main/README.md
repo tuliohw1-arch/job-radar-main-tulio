@@ -210,7 +210,7 @@ O pool de títulos do perfil Brasil também cobre agora:
 
 Os títulos são específicos; palavras isoladas como “analista”, “suporte” ou “dados” não aprovam uma vaga por si só. O perfil Brasil continua exigindo remoto confirmado, escopo de contratação compatível com o Brasil e publicação verificável nos últimos `DIAS_MAXIMOS_PUBLICACAO` dias. A expansão de taxonomia não altera a janela de cinco dias nem os filtros de modalidade.
 
-**Limitação atual da classificação:** o modelo `Job` recebe título, empresa, localização, link, fonte, data e modalidade, mas não recebe a descrição completa das responsabilidades e requisitos. Portanto, a pontuação atual (1–10) é baseada em sinais disponíveis nos metadados e no título; ela não consegue ainda distinguir de forma confiável requisito obrigatório de desejável. Uma pontuação explicável de 0–100 baseada nas responsabilidades exige primeiro ampliar a extração de descrição nas fontes compatíveis e migrar a escala sem misturar os scores históricos já salvos no SQLite.
+**Estado atual da classificação:** o modelo `Job` já armazena descrição, origem/estado da extração, responsabilidades e requisitos identificados, além do score de compatibilidade 0–100 e suas justificativas. A escala histórica 0–10 permanece apenas para a lógica visual/roteamento legada; o corte eliminatório usa 55/100. Nem toda fonte publica o corpo completo, por isso resumos de SEO e páginas bloqueadas são marcados como incompletos/indisponíveis e não são tratados como descrição completa.
 
 
 
