@@ -580,6 +580,7 @@ def ciclo_de_busca(perfil: Perfil):
                 auditoria.contar("reprovadas_score_secundaria", len(candidatas) - len(vagas_secundarias))
 
             total_filtradas += len(vagas_filtradas) + len(vagas_secundarias)
+            auditoria.contar("atendem_criterios_finais", len(vagas_filtradas) + len(vagas_secundarias))
 
             novas_da_fonte = 0
             for vaga in vagas_filtradas:
@@ -746,6 +747,8 @@ def ciclo_de_busca(perfil: Perfil):
         f"avaliadas={auditoria.contadores.get('avaliadas_compatibilidade', 0)}, "
         f"aprovadas_score={auditoria.contadores.get('aprovadas_score', 0)}, "
         f"reprovadas_score={auditoria.contadores.get('reprovadas_score', 0)}, "
+        f"reprovadas_score_secundaria={auditoria.contadores.get('reprovadas_score_secundaria', 0)}, "
+        f"atendem_criterios_finais={auditoria.contadores.get('atendem_criterios_finais', 0)}, "
         f"recuperadas_por_descricao={auditoria.contadores.get('recuperadas_por_descricao', 0)}, "
         f"enfileiradas_digest={auditoria.contadores.get('vagas_enfileiradas_digest', 0)}, "
         f"elegiveis_notificacao={auditoria.contadores.get('elegiveis_notificacao', 0)}, "
