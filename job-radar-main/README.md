@@ -7,7 +7,7 @@
 ![Playwright](https://img.shields.io/badge/Playwright-Scraping-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-Banco%20versionado-07405E?style=for-the-badge&logo=sqlite&logoColor=white)
 ![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-Cron-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)
-![Tests](https://img.shields.io/badge/testes-487%20esperados-informational?style=for-the-badge)
+![Tests](https://img.shields.io/badge/testes-automatizados-informational?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-em%20produção-success?style=for-the-badge)
 
 **Autora:** Liliam Kezia Oliveira Souza
@@ -102,7 +102,7 @@ Vaga de alta relevância chega na hora, com nível, data de publicação e link.
 ## 🏗️ Arquitetura técnica
 
 - **Filtro em 3 níveis de confiança:** cargo inequívoco passa sozinho; cargo ambíguo (ex: `Analyst`) só conta com um qualificador de dados junto no título; ferramenta (ex: `Power BI`) só conta com palavra de cargo junto. Nada aprova por palavra solta — é o que segura `Financial Analyst` e `HR Analyst` fora do radar.
-- **Score de relevância sem ML:** 5 sinais conhecidos, pesos calibrados contra o histórico real do banco. Conjunto pequeno e conhecido não precisa de modelo — precisa de critério explicável.
+- **Compatibilidade explicável (0–100):** combina família profissional, experiência operacional transferível, ferramentas comprovadas, alinhamento CRM/HubSpot, senioridade e remoto. Pesos ficam em `core/compatibilidade.py`; SQL e outras ferramentas em desenvolvimento são registradas como lacunas, não como experiência comprovada.
 - **Zero infraestrutura:** GitHub Actions como motor de cron, SQLite como banco versionado no próprio Git. O histórico de vagas já vistas *é* o commit.
 - **Resiliente:** nunca marca vaga como vista sem confirmar que a notificação saiu; alerta se a maioria das fontes falhar num ciclo; heartbeat diário confirmando que o robô está de pé; segunda tentativa quando uma busca volta vazia.
 - **481 testes em CI:** cada caso documenta um bug real já corrigido nesta base — inclusive os que ainda não foram corrigidos, fixados como comportamento conhecido em vez de escondidos.
@@ -187,7 +187,7 @@ Registrados de propósito — problema documentado é problema que alguém pode 
 | **93,8% das vagas vêm do LinkedIn** | Endpoint não oficial. Se mudar ou bloquear, o sistema perde quase todo o alcance. |
 | **Rate-limit em IP de datacenter** | Buscas voltam vazias no GitHub Actions e não reproduzem em rede residencial. Mitigado com segunda tentativa; a verificação vem dos logs de produção. |
 | **Fontes secundárias rendem pouco** | Catho, GeekHunter e 99Jobs somam menos de 3% das vagas. Funcionam — só não têm volume no nicho buscado. Mantidas porque o critério de remoção é estar quebrada, não render pouco. |
-| **O filtro lê só o título** | Vaga de BI com nome comercial (ex: "Analista Comercial" com Power BI na descrição) escapa. É o preço de manter o ruído perto de zero, e está instrumentado no log para virar decisão com número. |
+| **Descrição indisponível ou bloqueada** | A extração tenta dados estruturados, metadados, HTML visível e fallback com Playwright. Se a descrição continuar ausente/incompleta, a avaliação fica marcada como insuficiente e o score é limitado; o sistema não inventa requisitos. |
 | **Ruído aceito conscientemente** | `Data Center Operations Analyst` passa, porque "data center" casa o qualificador "data". Não apareceu nas amostras medidas; está fixado em teste para quando incomodar. |
 
 ---
@@ -212,3 +212,15 @@ Os títulos são específicos; palavras isoladas como “analista”, “suporte
 
 **Limitação atual da classificação:** o modelo `Job` recebe título, empresa, localização, link, fonte, data e modalidade, mas não recebe a descrição completa das responsabilidades e requisitos. Portanto, a pontuação atual (1–10) é baseada em sinais disponíveis nos metadados e no título; ela não consegue ainda distinguir de forma confiável requisito obrigatório de desejável. Uma pontuação explicável de 0–100 baseada nas responsabilidades exige primeiro ampliar a extração de descrição nas fontes compatíveis e migrar a escala sem misturar os scores históricos já salvos no SQLite.
 
+
+
+## Extração, compatibilidade e auditoria do funil
+
+- **Descrição:** Gupy e Sólides usam o texto já disponível no payload quando existe. Para demais anúncios, o extrator tenta JSON-LD `JobPosting`, metadados de descrição, texto HTML visível e, como fallback, conteúdo renderizado via Playwright. Redirecionamentos são seguidos; HTTP, timeout e estrutura sem descrição ficam registrados como erro/estado de extração.
+- **Estado explícito:** `completa` exige pelo menos 180 caracteres de conteúdo; textos curtos são `incompleta`; páginas sem texto útil são `indisponivel`. Responsabilidades e requisitos são separados quando os cabeçalhos podem ser reconhecidos. O texto original normalizado é preservado para avaliação.
+- **Segunda chance por conteúdo:** vagas do perfil Brasil que são explicitamente remotas e passam a localização, mas não passam pelo título, podem ser avaliadas pela descrição. Só são recuperadas com descrição completa, evidência de família profissional e score acima do limiar.
+- **Escopo Brasil:** o perfil Brasil descarta modalidade que não esteja confirmada como `Remoto`; cidade ou nome da empresa não substituem confirmação de trabalho 100% remoto. A janela de publicação verificável continua em cinco dias.
+- **Score:** `core/compatibilidade.py` usa pesos configuráveis e produz pontuação 0–100, critérios positivos, lacunas, requisitos obrigatórios sinalizados e aviso de informação insuficiente. O limiar inicial é 55/100; não é uma probabilidade de contratação.
+- **Auditoria por vaga/ciclo:** `core/auditoria.py` registra ID, URL original, fonte, etapa e motivo em `data/audit/ciclos.jsonl`. O workflow publica esse arquivo como artifact por 30 dias. O SQLite também persiste score, status de descrição e justificativa para vagas registradas.
+- **Telegram:** respostas HTTP 429/5xx têm tentativas limitadas; timeouts sem resposta não são repetidos imediatamente porque o servidor pode ter aceitado a mensagem. A vaga não é marcada como vista quando o envio falha, permitindo nova tentativa no ciclo seguinte.
+- **Validação real:** os testes automatizados simulam a API Telegram. Um envio real só pode ser declarado validado quando uma execução de produção comprovar a entrega usando os segredos do repositório; os testes nunca enviam mensagens reais.
