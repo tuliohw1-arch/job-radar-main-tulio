@@ -157,7 +157,7 @@ def analisar_secoes(descricao: str) -> dict[str, list[str]]:
     return secoes
 
 
-def extrair_descricao(url: str, session=None) -> dict[str, Any]:
+def extrair_descricao(url: str, session=None, renderizar_dinamico: bool = True) -> dict[str, Any]:
     """Retorna estado e metadados da extração. Erros não incluem URL/token em logs."""
     resultado = {
         "descricao": "",
@@ -216,6 +216,44 @@ def extrair_descricao(url: str, session=None) -> dict[str, Any]:
         resultado["erro_extracao"] = "html_ou_dados_invalidos"
     except Exception as erro:  # proteção contra HTMLParser/estrutura inesperada
         resultado["erro_extracao"] = f"erro_{type(erro).__name__}"
+
+    if not resultado["descricao"] and renderizar_dinamico:
+        # Fallback para boards que preenchem o corpo via JavaScript. É lazy:
+        # só abre Chromium quando a resposta HTTP não forneceu descrição útil.
+        try:
+            from playwright.sync_api import sync_playwright
+
+            with sync_playwright() as playwright:
+                browser = playwright.chromium.launch(headless=True)
+                try:
+                    page = browser.new_page()
+                    page.goto(url, wait_until="domcontentloaded", timeout=10000)
+                    try:
+                        texto_renderizado = page.locator("body").inner_text(timeout=5000)
+                    except Exception:
+                        texto_renderizado = ""
+                    texto_renderizado = normalizar_texto(texto_renderizado)
+                    tem_sinais_vaga = re.search(
+                        r"responsabil|requisit|qualifica|experi[eê]ncia|benef[ií]cios|"
+                        r"responsibilit|qualification|experience|about the role|"
+                        r"descri[cç][aã]o da vaga",
+                        texto_renderizado,
+                        re.IGNORECASE,
+                    )
+                    if tem_sinais_vaga and len(texto_renderizado) >= 40:
+                        resultado["descricao"] = texto_renderizado
+                        resultado["origem_descricao"] = "playwright_visivel"
+                        resultado["url_final"] = page.url or resultado["url_final"]
+                        resultado["status_extracao"] = (
+                            "completa" if len(texto_renderizado) >= MIN_CHARS_DESCRICAO else "incompleta"
+                        )
+                        resultado["erro_extracao"] = ""
+                finally:
+                    browser.close()
+        except Exception as erro:
+            # Nunca registrar mensagem da exceção: pode incluir URL com query/token.
+            if not resultado["descricao"]:
+                resultado["erro_extracao"] = f"renderizacao_{type(erro).__name__}"
 
     if resultado["descricao"]:
         resultado.update(analisar_secoes(resultado["descricao"]))
