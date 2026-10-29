@@ -105,7 +105,7 @@ Vaga de alta relevância chega na hora, com nível, data de publicação e link.
 - **Compatibilidade explicável (0–100):** combina família profissional, experiência operacional transferível, ferramentas comprovadas, alinhamento CRM/HubSpot, senioridade e remoto. Pesos ficam em `core/compatibilidade.py`; SQL e outras ferramentas em desenvolvimento são registradas como lacunas, não como experiência comprovada.
 - **Zero infraestrutura:** GitHub Actions como motor de cron, SQLite como banco versionado no próprio Git. O histórico de vagas já vistas *é* o commit.
 - **Resiliente:** nunca marca vaga como vista sem confirmar que a notificação saiu; alerta se a maioria das fontes falhar num ciclo; heartbeat diário confirmando que o robô está de pé; segunda tentativa quando uma busca volta vazia.
-- **481 testes em CI:** cada caso documenta um bug real já corrigido nesta base — inclusive os que ainda não foram corrigidos, fixados como comportamento conhecido em vez de escondidos.
+- **Testes automatizados em CI:** a suíte cobre filtros, scrapers, datas, extração de descrições, scoring, persistência, auditoria e notificações simuladas; os resultados atuais devem ser conferidos na execução do GitHub Actions vinculada à PR.
 
 ## 📋 Regras de negócio
 
@@ -174,7 +174,7 @@ JOBRADAR_DB_PATH=data/teste.db python main.py --perfil brasil --once
 pytest tests/ -v
 ```
 
-481 casos em 17 arquivos, cobrindo filtro, regras de negócio, paginação de cada fonte, datas de publicação e o relatório de precisão — todos rodando a cada push via GitHub Actions.
+A suíte cobre filtros, regras de negócio, paginação das fontes, datas de publicação, extração de descrições, compatibilidade 0–100, persistência e notificações simuladas — todos rodando a cada push via GitHub Actions.
 
 Os testes seguem uma convenção: **cada arquivo começa explicando o bug real que o motivou**, com o número medido. Um teste que só afirma que `2 + 2 = 4` não conta; o que conta é o que quebrou de verdade e como se descobriu.
 
