@@ -210,7 +210,8 @@ KEYWORDS_RELACIONAMENTO_ATENDIMENTO = KEYWORDS_OPERACOES_CLIENTE
 # "suporte", "dados") em critérios de aprovação.
 KEYWORDS_SUPORTE_OPERACOES_TI = [
     "Analista de TI Júnior", "Analista de TI Junior", "Analista TI Jr",
-    "IT Analyst Junior", "Junior IT Analyst", "IT Support Analyst Jr",\n    "Junior IT Support Analyst", "IT Support Analyst Junior",
+    "IT Analyst Junior", "Junior IT Analyst", "IT Support Analyst Jr",
+    "Junior IT Support Analyst", "IT Support Analyst Junior",
     "Analista de Suporte Júnior", "Analista de Suporte Junior",
     "Analista de Suporte Jr", "Analista de Suporte Técnico Júnior",
     "Analista de Suporte Tecnico Junior", "Analista de Suporte Técnico Jr",
