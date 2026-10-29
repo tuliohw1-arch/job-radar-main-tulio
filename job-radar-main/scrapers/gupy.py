@@ -91,7 +91,7 @@ def montar_job(vaga: dict) -> Job | None:
         modalidade=montar_modalidade(vaga),
         descricao=(vaga.get("description") or vaga.get("jobDescription") or vaga.get("responsibilities") or "").strip(),
         origem_descricao="api_payload" if any(vaga.get(k) for k in ("description", "jobDescription", "responsibilities")) else "",
-        status_extracao="incompleta" if len((vaga.get("description") or vaga.get("jobDescription") or vaga.get("responsibilities") or "").strip()) < 180 else "completa",
+        status_extracao="completa" if len((vaga.get("description") or vaga.get("jobDescription") or vaga.get("responsibilities") or "").strip()) >= 180 else ("incompleta" if (vaga.get("description") or vaga.get("jobDescription") or vaga.get("responsibilities") or "").strip() else "indisponivel"),
     )
 
 
