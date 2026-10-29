@@ -56,10 +56,10 @@ def test_extrai_descricao_completa_de_jsonld_jobposting():
     assert session.calls[0][1]["timeout"] > 0
 
 
-def test_extrai_descricao_por_meta_quando_estrutura_jsonld_nao_existe():
+def test_meta_description_e_tratada_como_resumo_incompleto():
     html = f'<html><head><meta property="og:description" content="{DESCRICAO}"></head></html>'
     resultado = extrair_descricao("https://example.com/job", session=SessaoFake(RespostaFake(html)))
-    assert resultado["status_extracao"] == "completa"
+    assert resultado["status_extracao"] == "incompleta"
     assert resultado["origem_descricao"] == "meta"
 
 
