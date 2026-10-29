@@ -307,6 +307,8 @@ def _enviar_digest_diario(perfil: Perfil, auditoria: AuditoriaCiclo | None = Non
         definir_metadado(chave, hoje.isoformat())
         logger.info(f"[{perfil.nome}] Digest diário enviado: {len(vagas_pendentes)} vaga(s).")
     else:
+        if auditoria:
+            auditoria.contar("lotes_digest_falhos")
         # Não marca metadado nem limpa a fila — tenta de novo no próximo
         # ciclo (ver enviar_digest/marcar_digest_enviado: preferir duplicar
         # a perder vaga).
@@ -397,10 +399,28 @@ def ciclo_de_busca(perfil: Perfil):
                 continue
 
             _marcar_fonte_baixa_frequencia_concluida(perfil, scraper)
+            quantidade_bruta_fonte = len(vagas)
+            total_brutas += quantidade_bruta_fonte
+            auditoria.contar("brutas_recebidas", quantidade_bruta_fonte)
+            auditoria.contar(f"brutas_fonte_{nome}", quantidade_bruta_fonte)
+
+            # Remove duplicatas geradas por termos/páginas sobrepostos antes
+            # de contar as vagas únicas que seguem no funil desta fonte.
+            vagas_unicas = []
+            ids_coletados = set()
+            chaves_coletadas = set()
+            for vaga_coletada in vagas:
+                if vaga_coletada.id in ids_coletados or vaga_coletada.chave_secundaria in chaves_coletadas:
+                    auditoria.contar("descartadas_duplicidade")
+                    auditoria.registrar(vaga_coletada, "duplicada_na_coleta", "URL ou empresa+título repetido na mesma fonte")
+                    continue
+                ids_coletados.add(vaga_coletada.id)
+                chaves_coletadas.add(vaga_coletada.chave_secundaria)
+                vagas_unicas.append(vaga_coletada)
+            vagas = vagas_unicas
             auditoria.contar("coletadas", len(vagas))
             for job_coletado in vagas:
                 auditoria.registrar(job_coletado, "coletada")
-            total_brutas += len(vagas)
             # No perfil Brasil, só notificamos vagas com data verificável dos
             # últimos 5 dias. Fontes sem data ou com formato ambíguo não podem
             # ser tratadas como recentes por suposição. O perfil internacional
@@ -436,7 +456,6 @@ def ciclo_de_busca(perfil: Perfil):
                 vagas_para_avaliar = remotas_confirmadas
 
             vagas_filtradas, descartes = filtrar_vagas(vagas_para_avaliar, perfil.regras)
-            auditoria.contar(f"brutas_fonte_{nome}", len(vagas))
             auditoria.contar("avaliadas_filtro", len(vagas_para_avaliar))
             ids_aceitas_filtro = {v.id for v in vagas_filtradas}
             for job_candidato in vagas_para_avaliar:
