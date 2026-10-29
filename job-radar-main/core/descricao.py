@@ -53,6 +53,10 @@ class _TextoHTML(HTMLParser):
 
 def normalizar_texto(texto: str) -> str:
     texto = (texto or "").replace("\xa0", " ")
+    if re.search(r"<[a-zA-Z][^>]*>", texto):
+        parser = _TextoHTML()
+        parser.feed(texto)
+        texto = "\n".join(parser.partes)
     texto = re.sub(r"[ \t\f\v]+", " ", texto)
     texto = re.sub(r" *\n *", "\n", texto)
     texto = re.sub(r"\n{3,}", "\n\n", texto)
