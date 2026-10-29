@@ -118,14 +118,14 @@ def _extrair_meta_e_jsonld(html: str) -> tuple[str, str]:
     for bruto in parser.jsonld:
         try:
             for descricao in _descricoes_jsonld(json.loads(bruto)):
-                if len(descricao) >= MIN_CHARS_DESCRICAO:
+                if descricao.strip():
                     return descricao, "jsonld"
         except (ValueError, TypeError):
             continue
 
     for chave in ("og:description", "description", "twitter:description"):
         valor = parser.meta.get(chave, "")
-        if len(normalizar_texto(valor)) >= MIN_CHARS_DESCRICAO:
+        if normalizar_texto(valor):
             return normalizar_texto(valor), "meta"
     return "", ""
 
@@ -195,7 +195,7 @@ def extrair_descricao(url: str, session=None) -> dict[str, Any]:
                 texto,
                 re.IGNORECASE,
             )
-            if sinais and len(texto) >= MIN_CHARS_DESCRICAO:
+            if sinais and len(texto) >= 40:
                 descricao, origem = texto, "html_visivel"
         if descricao:
             resultado["descricao"] = normalizar_texto(descricao)
