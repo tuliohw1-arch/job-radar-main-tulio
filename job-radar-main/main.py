@@ -743,6 +743,8 @@ def ciclo_de_busca(perfil: Perfil):
     logger.info(
         f"[{perfil.nome}] Auditoria do funil: coletadas={auditoria.contadores.get('coletadas', 0)}, "
         f"fontes_brutas={sum(v for k, v in auditoria.contadores.items() if k.startswith('brutas_fonte_'))}, "
+        f"falhas_fontes={auditoria.contadores.get('falhas_fontes', 0)}, "
+        f"fontes_sem_resultado={auditoria.contadores.get('fontes_sem_resultado', 0)}, "
         f"descartadas_data={auditoria.contadores.get('descartadas_data', 0)}, "
         f"descartadas_modalidade_local={auditoria.contadores.get('descartadas_modalidade_local', 0)}, "
         f"descartadas_cargo={auditoria.contadores.get('descartadas_cargo', 0)}, "
