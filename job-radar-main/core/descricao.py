@@ -171,7 +171,7 @@ def extrair_descricao(url: str, session=None, renderizar_dinamico: bool = True) 
         return resultado
     cliente = session or requests
     try:
-        resposta = cliente.get(url, headers=HEADERS, timeout=TIMEOUT)
+        resposta = cliente.get(url, headers=HEADERS, timeout=TIMEOUT_DESCRICAO)
         resultado["url_final"] = getattr(resposta, "url", url) or url
         resposta.raise_for_status()
         content_type = (getattr(resposta, "headers", {}) or {}).get("Content-Type", "")
