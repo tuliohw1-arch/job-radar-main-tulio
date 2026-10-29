@@ -80,7 +80,7 @@ def pontuar_compatibilidade(job) -> dict:
     else:
         lacunas.append("Sem sinal textual relevante de CRM/HubSpot.")
 
-    senioridade = _normalizar(titulo + " " + descricao)
+    senioridade = _normalizar(getattr(job, "senioridade_detectada", "") or titulo)
     if re.search(r"\b(junior|jr\.?|entry.level|associate|assistente|analista i)\b", senioridade):
         score += pesos["senioridade"]
         detalhes.append("Senioridade de entrada/júnior alinhada.")
