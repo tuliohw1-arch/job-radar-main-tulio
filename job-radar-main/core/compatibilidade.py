@@ -17,7 +17,7 @@ PESOS_COMPATIBILIDADE = {
     "senioridade": 10,
     "remoto_brasil": 5,
 }
-LIMIAR_COMPATIBILIDADE_MINIMA = 55
+LIMIAR_COMPATIBILIDADE_MINIMA = 1  # qualquer sinal profissional relevante já pode entrar
 
 
 def _normalizar(texto: str) -> str:
