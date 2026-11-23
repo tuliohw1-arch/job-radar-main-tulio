@@ -245,3 +245,42 @@ def test_modalidade_hibrida_da_pagina_substitui_card_remoto_no_enriquecimento(mo
     )
     main._enriquecer_e_pontuar(job, {})
     assert job.modalidade == "Híbrido"
+
+
+
+def test_remote_em_url_ou_titulo_ou_descricao_eh_elegivel():
+    casos = [
+        Job(titulo="Analista de CRM Jr", empresa="A", local="Brasil", link="https://jobs.example.com/remote-crm", site="Teste"),
+        Job(titulo="Remote Customer Support Analyst", empresa="A", local="Brasil", link="https://jobs.example.com/123", site="Teste"),
+        Job(titulo="Analista de Operações Jr", empresa="A", local="Brasil", link="https://jobs.example.com/123", site="Teste", descricao="Oportunidade 100% homeoffice. " * 12),
+    ]
+    assert all(v.modalidade == "Remoto" for v in casos)
+
+
+def test_remote_no_link_nao_supera_contradicao_hibrida_ou_presencial():
+    hibrida = Job(
+        titulo="Remote CRM Analyst",
+        empresa="A",
+        local="Brasil",
+        link="https://jobs.example.com/remote",
+        site="Teste",
+        descricao="This is a hybrid position with three days in office. " * 5,
+    )
+    presencial = Job(
+        titulo="Analista de CRM",
+        empresa="A",
+        local="Brasil",
+        link="https://jobs.example.com/homeoffice",
+        site="Teste",
+        descricao="This role is on-site at the office every day. " * 5,
+    )
+    assert hibrida.modalidade == "Híbrido"
+    assert presencial.modalidade == "Presencial"
+
+
+def test_score_minimo_agora_aceita_qualquer_sinal_profissional():
+    from core.compatibilidade import LIMIAR_COMPATIBILIDADE_MINIMA
+    assert LIMIAR_COMPATIBILIDADE_MINIMA == 1
+    vaga = _job(descricao="Responsabilidades: acompanhar chamados e SLAs. " * 5)
+    resultado = pontuar_compatibilidade(vaga)
+    assert resultado["score"] >= 1
