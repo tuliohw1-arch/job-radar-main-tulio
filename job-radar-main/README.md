@@ -116,7 +116,7 @@ O filtro existe para uma busca específica, e as regras estão explícitas em `c
 - **Híbrido e presencial:** sempre rejeitados, inclusive em Belo Horizonte.
 - **Internacional:** o workflow não executa o perfil internacional; vagas com escopo explícito fora do Brasil ou sem escopo confirmado são rejeitadas.
 - **Taxonomia de carreira (Brasil):** grupos A — CRM/CRM Operations/CS Ops (40%), B — Business Operations/Sales Ops/RevOps/implantação/onboarding (40%) e C — Marketing Operations/automação/suporte SaaS (20%). Os pesos são uma proposta de priorização, não probabilidades de contratação.
-- **Compatibilidade:** CRM/CRM Operations é prioridade; CS Ops e operações adjacentes entram por títulos específicos. Vagas abaixo de 55/100 de compatibilidade são descartadas; o score histórico 0–10 não é o filtro eliminatório.
+- **Compatibilidade:** CRM/CRM Operations é prioridade; CS Ops e operações adjacentes entram por títulos específicos. Não há corte alto de score: basta pelo menos 1 ponto e um sinal profissional concreto relacionado ao currículo. O score histórico 0–10 não é o filtro eliminatório.
 
 Cidade homônima é tratada: `Campina Grande do Sul, Paraná` e `Fortaleza de Minas, Minas Gerais` são barradas pela conferência de UF, que entende tanto a sigla quanto o estado por extenso.
 
@@ -210,7 +210,7 @@ O pool de títulos do perfil Brasil também cobre agora:
 
 Os títulos são específicos; palavras isoladas como “analista”, “suporte” ou “dados” não aprovam uma vaga por si só. O perfil Brasil continua exigindo remoto confirmado, escopo de contratação compatível com o Brasil e publicação verificável nos últimos `DIAS_MAXIMOS_PUBLICACAO` dias. A expansão de taxonomia não altera a janela de cinco dias nem os filtros de modalidade.
 
-**Estado atual da classificação:** o modelo `Job` já armazena descrição, origem/estado da extração, responsabilidades e requisitos identificados, além do score de compatibilidade 0–100 e suas justificativas. A escala histórica 0–10 permanece apenas para a lógica visual/roteamento legada; o corte eliminatório usa 55/100. Nem toda fonte publica o corpo completo, por isso resumos de SEO e páginas bloqueadas são marcados como incompletos/indisponíveis e não são tratados como descrição completa.
+**Estado atual da classificação:** o modelo `Job` já armazena descrição, origem/estado da extração, responsabilidades e requisitos identificados, além do score de compatibilidade 0–100 e suas justificativas. A escala histórica 0–10 permanece apenas para a lógica visual/roteamento legada; o corte mínimo é 1/100, acompanhado de pelo menos um critério profissional positivo (família, experiência operacional, ferramenta comprovada ou CRM). Nem toda fonte publica o corpo completo, por isso resumos de SEO e páginas bloqueadas são marcados como incompletos/indisponíveis e não são tratados como descrição completa.
 
 
 
@@ -218,9 +218,14 @@ Os títulos são específicos; palavras isoladas como “analista”, “suporte
 
 - **Descrição:** Gupy e Sólides usam o texto já disponível no payload quando existe. Para demais anúncios, o extrator tenta JSON-LD `JobPosting`, metadados de descrição, texto HTML visível e, como fallback, conteúdo renderizado via Playwright. Redirecionamentos são seguidos; HTTP, timeout e estrutura sem descrição ficam registrados como erro/estado de extração.
 - **Estado explícito:** `completa` exige pelo menos 180 caracteres de conteúdo; textos curtos são `incompleta`; páginas sem texto útil são `indisponivel`. Responsabilidades e requisitos são separados quando os cabeçalhos podem ser reconhecidos; ferramentas citadas e senioridade explícita também são extraídas. A modalidade declarada na descrição pode corrigir um card contraditório. O texto original normalizado é preservado para avaliação.
-- **Segunda chance por conteúdo:** vagas do perfil Brasil que são explicitamente remotas e passam a localização, mas não passam pelo título, podem ser avaliadas pela descrição. Só são recuperadas com descrição completa, evidência de família profissional e score acima do limiar.
-- **Escopo Brasil:** o perfil Brasil descarta modalidade que não esteja confirmada como `Remoto`; cidade ou nome da empresa não substituem confirmação de trabalho 100% remoto. A janela de publicação verificável continua em cinco dias.
-- **Score:** `core/compatibilidade.py` usa pesos configuráveis e produz pontuação 0–100, critérios positivos, lacunas, requisitos obrigatórios sinalizados e aviso de informação insuficiente. O limiar inicial é 55/100; não é uma probabilidade de contratação.
+- **Segunda chance por conteúdo:** vagas do perfil Brasil que são explicitamente remotas e passam a localização, mas não passam pelo título, podem ser avaliadas pela descrição. São avaliadas pelo conteúdo; entram quando há ao menos um sinal profissional concreto e score positivo, mesmo que o título não corresponda exatamente à taxonomia.
+- **Escopo Brasil:** o perfil Brasil aceita sinal explícito `remoto`, `remote`, `home office` ou `homeoffice` na modalidade, localização, título, URL ou descrição. Evidência contraditória de híbrido/presencial prevalece. A janela de publicação verificável continua em cinco dias. A janela de publicação verificável continua em cinco dias.
+- **Score:** `core/compatibilidade.py` usa pesos configuráveis e produz pontuação 0–100, critérios positivos, lacunas, requisitos obrigatórios sinalizados e aviso de informação insuficiente. O limiar mínimo é 1/100, exigindo também um critério profissional positivo; não é uma probabilidade de contratação.
 - **Auditoria por vaga/ciclo:** `core/auditoria.py` registra ID, URL original, fonte, etapa e motivo em `data/audit/ciclos.jsonl`. O workflow publica esse arquivo como artifact por 30 dias. O SQLite também persiste score, status de descrição e justificativa para vagas registradas.
 - **Telegram:** respostas HTTP 429/5xx têm tentativas limitadas; timeouts sem resposta não são repetidos imediatamente porque o servidor pode ter aceitado a mensagem. A vaga não é marcada como vista quando o envio falha, permitindo nova tentativa no ciclo seguinte.
 - **Validação real:** os testes automatizados simulam a API Telegram. Um envio real só pode ser declarado validado quando uma execução de produção comprovar a entrega usando os segredos do repositório; os testes nunca enviam mensagens reais.
+
+
+### Regra ampliada de remoto e compatibilidade
+
+O perfil Brasil considera como evidência remota os termos `remoto`, `remote`, `home office`, `homeoffice` e variantes reconhecidas quando aparecem na modalidade, localização, título, URL ou descrição do anúncio. Se o texto também declarar explicitamente regime híbrido ou presencial, a vaga é rejeitada. Vagas recentes que passem pelo sinal remoto são avaliadas pela descrição mesmo quando o título não coincide com as palavras-chave tradicionais. O filtro mantém a exigência de ao menos um sinal profissional relacionado ao currículo e aceita qualquer score positivo (mínimo 1/100), em vez de exigir 55/100.
