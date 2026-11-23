@@ -606,15 +606,33 @@ def ciclo_de_busca(perfil: Perfil):
                     f"lacunas: {'; '.join(vaga_avaliada.compatibilidade_lacunas or []) or 'nenhuma'}"
                 )
             vagas_filtradas = vagas_modalidade_ok
+            def possui_sinal_profissional(vaga):
+                return any(
+                    str(criterio).startswith((
+                        "Família de cargo alinhada",
+                        "Experiência transferível em suporte/operações",
+                        "Ferramentas compatíveis com experiência/certificações",
+                        "Alinhamento com objetivo de transição",
+                    ))
+                    for criterio in (vaga.compatibilidade_criterios or [])
+                )
+
             rejeitadas_score = [
                 v for v in vagas_filtradas
-                if v.compatibilidade_score < LIMIAR_COMPATIBILIDADE_MINIMA
+                if (
+                    v.compatibilidade_score < LIMIAR_COMPATIBILIDADE_MINIMA
+                    or not possui_sinal_profissional(v)
+                )
             ]
             auditoria.contar("reprovadas_score", len(rejeitadas_score))
             for vaga_reprovada in rejeitadas_score:
                 auditoria.registrar(
                     vaga_reprovada, "rejeitada_score",
-                    f"{vaga_reprovada.compatibilidade_score}/100 < {LIMIAR_COMPATIBILIDADE_MINIMA}/100"
+                    (
+                        f"{vaga_reprovada.compatibilidade_score}/100 < {LIMIAR_COMPATIBILIDADE_MINIMA}/100"
+                        if vaga_reprovada.compatibilidade_score < LIMIAR_COMPATIBILIDADE_MINIMA
+                        else "sem sinal profissional compatível no título/descrição"
+                    )
                 )
             vagas_filtradas = [
                 v for v in vagas_filtradas
