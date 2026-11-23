@@ -119,6 +119,9 @@ def montar_job(vaga: dict) -> Job | None:
         site="Solides",
         publicado_em=(vaga.get("createdAt") or "").strip()[:10],
         modalidade=montar_modalidade(vaga),
+        descricao=(vaga.get("description") or vaga.get("descriptionText") or vaga.get("responsibilities") or "").strip(),
+        origem_descricao="api_payload" if any(vaga.get(k) for k in ("description", "descriptionText", "responsibilities")) else "",
+        status_extracao="completa" if len((vaga.get("description") or vaga.get("descriptionText") or vaga.get("responsibilities") or "").strip()) >= 180 else ("incompleta" if (vaga.get("description") or vaga.get("descriptionText") or vaga.get("responsibilities") or "").strip() else "indisponivel"),
     )
 
 

@@ -33,8 +33,73 @@ from notifier.telegram import (
 from core.perfis import FREQUENCIA_ALTA, FREQUENCIA_BAIXA, PERFIS, Perfil
 from utils.filtro import filtrar_publicadas_recentemente, filtrar_vagas
 from core.logger import get_logger
+from core.auditoria import AuditoriaCiclo
+from core.compatibilidade import (
+    LIMIAR_COMPATIBILIDADE_MINIMA,
+    pontuar_compatibilidade,
+)
+from core.descricao import (
+    analisar_secoes,
+    detectar_senioridade,
+    extrair_descricao,
+    extrair_ferramentas,
+    normalizar_texto,
+)
 
 logger = get_logger()
+
+
+def _enriquecer_e_pontuar(vaga, cache_descricoes: dict[str, dict]) -> None:
+    """Completa a descrição uma vez por URL e anexa score/justificativas."""
+    descricao_atual = (getattr(vaga, "descricao", "") or "").strip()
+    if len(descricao_atual) < 180:
+        chave = (vaga.link or "").split("#", 1)[0]
+        resultado = cache_descricoes.get(chave)
+        if resultado is None:
+            resultado = extrair_descricao(vaga.link)
+            cache_descricoes[chave] = resultado
+        descricao_extraida = resultado.get("descricao", "")
+        if len(descricao_extraida) > len(descricao_atual):
+            descricao_atual = descricao_extraida
+            vaga.origem_descricao = resultado.get("origem_descricao", "")
+            vaga.status_extracao = resultado.get("status_extracao", "indisponivel")
+            vaga.erro_extracao = resultado.get("erro_extracao", "")
+        elif not descricao_atual:
+            vaga.erro_extracao = resultado.get("erro_extracao", "")
+            vaga.status_extracao = resultado.get("status_extracao", "indisponivel")
+    if descricao_atual:
+        vaga.descricao = normalizar_texto(descricao_atual)
+        if len(vaga.descricao) >= 180:
+            vaga.status_extracao = "completa"
+        elif vaga.status_extracao not in ("incompleta", "indisponivel"):
+            vaga.status_extracao = "incompleta"
+        secoes = analisar_secoes(vaga.descricao)
+        vaga.responsabilidades = secoes["responsabilidades"]
+        vaga.requisitos_obrigatorios = secoes["requisitos_obrigatorios"]
+        vaga.requisitos_desejaveis = secoes["requisitos_desejaveis"]
+    else:
+        vaga.descricao = ""
+        vaga.status_extracao = vaga.status_extracao or "indisponivel"
+        vaga.responsabilidades = []
+        vaga.requisitos_obrigatorios = []
+        vaga.requisitos_desejaveis = []
+
+    vaga.ferramentas_detectadas = extrair_ferramentas(vaga.descricao)
+    nivel_titulo = vaga.senioridade
+    vaga.senioridade_detectada = (
+        nivel_titulo if nivel_titulo not in ("Não especificado", "")
+        else detectar_senioridade(vaga.descricao)
+    )
+    # A descrição do anúncio pode contradizer o card; a confirmação final de
+    # modalidade deve ocorrer depois da extração, não apenas no scraper.
+    vaga.__post_init__()
+    resultado_score = pontuar_compatibilidade(vaga)
+    vaga.compatibilidade_score = resultado_score["score"]
+    vaga.compatibilidade_criterios = resultado_score["criterios_positivos"]
+    vaga.compatibilidade_lacunas = resultado_score["lacunas"]
+    vaga.compatibilidade_requisitos_nao_atendidos = resultado_score["requisitos_obrigatorios_nao_atendidos"]
+    vaga.compatibilidade_justificativa = resultado_score["justificativa"]
+    vaga.compatibilidade_informacoes_insuficientes = resultado_score["informacoes_insuficientes"]
 
 
 def _chave_fonte_baixa_frequencia(perfil: Perfil, nome_scraper: str) -> str:
@@ -128,7 +193,8 @@ def _proximo_bloco_termos(perfil: Perfil) -> list[str]:
 
 
 def _enviar_heartbeat_diario(
-    perfil: Perfil, total_novas: int, scrapers_com_problema: list[str], total_fontes: int
+    perfil: Perfil, total_novas: int, scrapers_com_problema: list[str], total_fontes: int,
+    auditoria: AuditoriaCiclo | None = None,
 ):
     """No máximo 1 mensagem por dia (por perfil) confirmando que o ciclo
     rodou.
@@ -167,7 +233,11 @@ def _enviar_heartbeat_diario(
     )
     if enviado:
         definir_metadado(chave, hoje)
+        if auditoria:
+            auditoria.contar("mensagens_sistema_enviadas")
     else:
+        if auditoria:
+            auditoria.contar("mensagens_sistema_falhas")
         # Não registrar uma tentativa como envio: se o Telegram falhar
         # transitoriamente, o próximo ciclo precisa tentar novamente.
         logger.warning(
@@ -176,7 +246,7 @@ def _enviar_heartbeat_diario(
         )
 
 
-def _enviar_digest_diario(perfil: Perfil):
+def _enviar_digest_diario(perfil: Perfil, auditoria: AuditoriaCiclo | None = None):
     """No máximo 1 digest por dia (por perfil) — ver item 08. Junta tudo
     que ficou digest_pendente=1 desde o último envio (pode ser de vários
     ciclos de 3h) e manda ranqueado, melhor primeiro.
@@ -245,10 +315,15 @@ def _enviar_digest_diario(perfil: Perfil):
         return
 
     if enviar_digest(vagas_pendentes, perfil.nome):
+        if auditoria:
+            auditoria.contar("lotes_digest_enviados")
+            auditoria.contar("vagas_digest_enviadas", len(vagas_pendentes))
         marcar_digest_enviado(perfil.chave)
         definir_metadado(chave, hoje.isoformat())
         logger.info(f"[{perfil.nome}] Digest diário enviado: {len(vagas_pendentes)} vaga(s).")
     else:
+        if auditoria:
+            auditoria.contar("lotes_digest_falhos")
         # Não marca metadado nem limpa a fila — tenta de novo no próximo
         # ciclo (ver enviar_digest/marcar_digest_enviado: preferir duplicar
         # a perder vaga).
@@ -286,6 +361,8 @@ def _deve_alertar_saude(com_problema: int, total: int) -> bool:
     return com_problema > total / 2
 
 def ciclo_de_busca(perfil: Perfil):
+    auditoria = AuditoriaCiclo(perfil.chave)
+    cache_descricoes: dict[str, dict] = {}
     total_novas = 0
     total_brutas = 0
     total_filtradas = 0
@@ -318,10 +395,13 @@ def ciclo_de_busca(perfil: Perfil):
         for future in as_completed(futures):
             scraper = futures[future]
             nome = scraper.__class__.__name__
+            auditoria.contar(f"brutas_fonte_{nome}", 0)
 
             try:
                 vagas = future.result()
             except Exception as e:
+                auditoria.contar("falhas_fontes")
+                auditoria.registrar_fonte(nome, "falha_coleta", type(e).__name__)
                 logger.error(f"[{perfil.nome}] Erro no scraper {nome}: {e}")
                 scrapers_com_problema.append(nome)
                 continue
@@ -332,12 +412,35 @@ def ciclo_de_busca(perfil: Perfil):
             # também contamos "0 vaga bruta nessa fonte" como problema, não
             # só exceção.
             if not vagas:
+                auditoria.contar("fontes_sem_resultado")
+                auditoria.registrar_fonte(nome, "coleta_vazia", "fonte não retornou vagas; não confundir com busca comprovadamente vazia")
                 logger.warning(f"[{perfil.nome}] {nome} não retornou nenhuma vaga bruta neste ciclo.")
                 scrapers_com_problema.append(nome)
                 continue
 
             _marcar_fonte_baixa_frequencia_concluida(perfil, scraper)
-            total_brutas += len(vagas)
+            quantidade_bruta_fonte = len(vagas)
+            total_brutas += quantidade_bruta_fonte
+            auditoria.contar("brutas_recebidas", quantidade_bruta_fonte)
+            auditoria.contar(f"brutas_fonte_{nome}", quantidade_bruta_fonte)
+
+            # Remove duplicatas geradas por termos/páginas sobrepostos antes
+            # de contar as vagas únicas que seguem no funil desta fonte.
+            vagas_unicas = []
+            ids_coletados = set()
+            chaves_coletadas = set()
+            for vaga_coletada in vagas:
+                if vaga_coletada.id in ids_coletados or vaga_coletada.chave_secundaria in chaves_coletadas:
+                    auditoria.contar("descartadas_duplicidade")
+                    auditoria.registrar(vaga_coletada, "duplicada_na_coleta", "URL ou empresa+título repetido na mesma fonte")
+                    continue
+                ids_coletados.add(vaga_coletada.id)
+                chaves_coletadas.add(vaga_coletada.chave_secundaria)
+                vagas_unicas.append(vaga_coletada)
+            vagas = vagas_unicas
+            auditoria.contar("coletadas", len(vagas))
+            for job_coletado in vagas:
+                auditoria.registrar(job_coletado, "coletada")
             # No perfil Brasil, só notificamos vagas com data verificável dos
             # últimos 5 dias. Fontes sem data ou com formato ambíguo não podem
             # ser tratadas como recentes por suposição. O perfil internacional
@@ -348,26 +451,194 @@ def ciclo_de_busca(perfil: Perfil):
                     vagas, dias_maximos=DIAS_MAXIMOS_PUBLICACAO
                 )
                 if descartadas_recencia:
+                    auditoria.contar("descartadas_data", descartadas_recencia)
+                    ids_recentes = {v.id for v in vagas_para_avaliar}
+                    for job_descartado in vagas:
+                        if job_descartado.id not in ids_recentes:
+                            auditoria.registrar(job_descartado, "rejeitada_data", "data ausente, ambígua, futura ou fora da janela de 5 dias")
                     logger.info(
                         f"[{perfil.nome}] {descartadas_recencia} vaga(s) descartada(s) "
                         "por data ausente, ambígua, futura ou anterior aos últimos 5 dias."
                     )
+            # O perfil Brasil é estritamente remoto: cidade de contratação
+            # por si só não torna uma vaga elegível para este radar.
+            if perfil.chave == "brasil":
+                remotas_confirmadas = []
+                for vaga_modalidade in vagas_para_avaliar:
+                    # Se a fonte não informou modalidade, tente descobrir pelo
+                    # corpo do anúncio antes de rejeitar. Modalidade híbrida/
+                    # presencial explícita não dispara requisição extra.
+                    modalidade_atual = (vaga_modalidade.modalidade or "").strip().casefold()
+                    if modalidade_atual not in ("remoto", "híbrido", "hibrido", "presencial"):
+                        chave_descricao = (vaga_modalidade.link or "").split("#", 1)[0]
+                        resultado_descricao = cache_descricoes.get(chave_descricao)
+                        if resultado_descricao is None:
+                            resultado_descricao = extrair_descricao(vaga_modalidade.link)
+                            cache_descricoes[chave_descricao] = resultado_descricao
+                        if resultado_descricao.get("descricao"):
+                            vaga_modalidade.descricao = resultado_descricao["descricao"]
+                            vaga_modalidade.origem_descricao = resultado_descricao.get("origem_descricao", "")
+                            vaga_modalidade.status_extracao = resultado_descricao.get("status_extracao", "indisponivel")
+                            vaga_modalidade.erro_extracao = resultado_descricao.get("erro_extracao", "")
+                            vaga_modalidade.__post_init__()
+                        auditoria.registrar(
+                            vaga_modalidade, "verificacao_modalidade_descricao",
+                            resultado_descricao.get("erro_extracao", "") or "modalidade conferida na descrição"
+                        )
+                    if (vaga_modalidade.modalidade or "").strip().casefold() == "remoto":
+                        remotas_confirmadas.append(vaga_modalidade)
+                    else:
+                        auditoria.contar("descartadas_modalidade_local")
+                        auditoria.registrar(
+                            vaga_modalidade, "rejeitada_modalidade",
+                            "modalidade não confirmada como 100% remota"
+                        )
+                vagas_para_avaliar = remotas_confirmadas
+
             vagas_filtradas, descartes = filtrar_vagas(vagas_para_avaliar, perfil.regras)
+            auditoria.contar("avaliadas_filtro", len(vagas_para_avaliar))
+            ids_aceitas_filtro = {v.id for v in vagas_filtradas}
+            for job_candidato in vagas_para_avaliar:
+                if job_candidato.id not in ids_aceitas_filtro:
+                    avaliacao = job_candidato._avaliar(perfil.regras)
+                    if not avaliacao.bate_cidade:
+                        motivo_rejeicao = "modalidade_ou_localizacao"
+                        auditoria.contar("descartadas_modalidade_local")
+                    else:
+                        motivo_rejeicao = "cargo_ou_taxonomia"
+                        auditoria.contar("descartadas_cargo")
+                    auditoria.registrar(job_candidato, "rejeitada_filtro", motivo_rejeicao)
             descartes_escopo_ciclo.update(descartes)
 
             ids_aprovadas = {v.id for v in vagas_filtradas}
+            # Toda vaga recente com evidência remota chega à avaliação por
+            # conteúdo, inclusive títulos genéricos fora da taxonomia fechada.
+            # Isso amplia recall sem liberar vagas sem relação com o currículo:
+            # a pontuação exige sinais profissionais concretos.
+            candidatas_descricao = [
+                v for v in vagas_para_avaliar if v.id not in ids_aprovadas
+            ]
             titulo_barrou_em_cidade.extend(
                 f"{v.titulo} — {v.empresa} ({v.local})"
-                for v in vagas_para_avaliar
-                if v.id not in ids_aprovadas and v.rejeitada_so_pelo_cargo(perfil.regras)
+                for v in candidatas_descricao
             )
 
-            # Alta precisão: vagas abaixo do mínimo são descartadas, não
-            # enviadas ao digest.
+            # Segunda chance baseada no conteúdo: só abre a página de anúncios
+            # remotos no escopo elegível que falharam exclusivamente pelo título.
+            # Exige descrição completa, score suficiente e evidência textual da
+            # família profissional; isso evita aceitar vagas por palavras vagas.
+            vagas_recuperadas_descricao = []
+            for vaga_por_descricao in candidatas_descricao:
+                _enriquecer_e_pontuar(vaga_por_descricao, cache_descricoes)
+                auditoria.contar("avaliadas_compatibilidade")
+                if vaga_por_descricao.status_extracao == "completa":
+                    auditoria.contar("descricao_completa")
+                else:
+                    auditoria.contar("descricao_insuficiente")
+                auditoria.registrar(
+                    vaga_por_descricao, "avaliada_compatibilidade_titulo_rejeitado",
+                    vaga_por_descricao.compatibilidade_justificativa
+                )
+                criterios = vaga_por_descricao.compatibilidade_criterios or []
+                compatibilidade_profissional = any(
+                    str(criterio).startswith((
+                        "Família de cargo alinhada",
+                        "Experiência transferível em suporte/operações",
+                        "Ferramentas compatíveis com experiência/certificações",
+                        "Alinhamento com objetivo de transição",
+                    ))
+                    for criterio in criterios
+                )
+                modalidade_confirmada = (
+                    perfil.chave != "brasil"
+                    or (vaga_por_descricao.modalidade or "").strip().casefold() == "remoto"
+                )
+                if (
+                    modalidade_confirmada
+                    and compatibilidade_profissional
+                    and vaga_por_descricao.compatibilidade_score >= LIMIAR_COMPATIBILIDADE_MINIMA
+                ):
+                    vaga_por_descricao.relevancia = max(
+                        vaga_por_descricao.pontuar_relevancia(perfil.regras), 7
+                    )
+                    vaga_por_descricao.motivo = "Descrição alinhada às áreas-alvo"
+                    vagas_filtradas.append(vaga_por_descricao)
+                    auditoria.contar("recuperadas_por_descricao")
+                    auditoria.registrar(
+                        vaga_por_descricao, "aprovada_por_descricao",
+                        vaga_por_descricao.compatibilidade_justificativa
+                    )
+                else:
+                    auditoria.contar("rejeitadas_por_descricao")
+                    auditoria.registrar(
+                        vaga_por_descricao, "rejeitada_por_descricao",
+                        "modalidade contraditória ou nenhum sinal profissional compatível com o currículo"
+                    )
+
+            # A descrição é enriquecida para vagas que passaram no título e para
+            # candidatas recuperadas pelo conteúdo, limitando requisições extras.
+            # Sem descrição suficiente, o score é limitado e a incerteza fica explícita.
+            ids_recuperadas_por_descricao = {v.id for v in vagas_recuperadas_descricao}
+            vagas_modalidade_ok = []
+            for vaga_avaliada in vagas_filtradas:
+                if vaga_avaliada.id not in ids_recuperadas_por_descricao:
+                    _enriquecer_e_pontuar(vaga_avaliada, cache_descricoes)
+                    auditoria.contar("avaliadas_compatibilidade")
+                    if vaga_avaliada.status_extracao == "completa":
+                        auditoria.contar("descricao_completa")
+                    else:
+                        auditoria.contar("descricao_insuficiente")
+                    auditoria.registrar(
+                        vaga_avaliada, "avaliada_compatibilidade",
+                        vaga_avaliada.compatibilidade_justificativa
+                    )
+                if perfil.chave == "brasil" and (vaga_avaliada.modalidade or "").strip().casefold() != "remoto":
+                    auditoria.contar("descartadas_modalidade_local")
+                    auditoria.registrar(
+                        vaga_avaliada, "rejeitada_modalidade_descricao",
+                        "a descrição contradiz o card: não é 100% remota"
+                    )
+                    continue
+                vagas_modalidade_ok.append(vaga_avaliada)
+                logger.info(
+                    f"[{perfil.nome}] Compatibilidade {vaga_avaliada.compatibilidade_score}/100 "
+                    f"({vaga_avaliada.status_extracao}) — {vaga_avaliada.titulo} | "
+                    f"lacunas: {'; '.join(vaga_avaliada.compatibilidade_lacunas or []) or 'nenhuma'}"
+                )
+            vagas_filtradas = vagas_modalidade_ok
+            def possui_sinal_profissional(vaga):
+                return any(
+                    str(criterio).startswith((
+                        "Família de cargo alinhada",
+                        "Experiência transferível em suporte/operações",
+                        "Ferramentas compatíveis com experiência/certificações",
+                        "Alinhamento com objetivo de transição",
+                    ))
+                    for criterio in (vaga.compatibilidade_criterios or [])
+                )
+
+            rejeitadas_score = [
+                v for v in vagas_filtradas
+                if (
+                    v.compatibilidade_score < LIMIAR_COMPATIBILIDADE_MINIMA
+                    or not possui_sinal_profissional(v)
+                )
+            ]
+            auditoria.contar("reprovadas_score", len(rejeitadas_score))
+            for vaga_reprovada in rejeitadas_score:
+                auditoria.registrar(
+                    vaga_reprovada, "rejeitada_score",
+                    (
+                        f"{vaga_reprovada.compatibilidade_score}/100 < {LIMIAR_COMPATIBILIDADE_MINIMA}/100"
+                        if vaga_reprovada.compatibilidade_score < LIMIAR_COMPATIBILIDADE_MINIMA
+                        else "sem sinal profissional compatível no título/descrição"
+                    )
+                )
             vagas_filtradas = [
                 v for v in vagas_filtradas
-                if v.relevancia >= LIMIAR_RELEVANCIA_MINIMA
+                if v.compatibilidade_score >= LIMIAR_COMPATIBILIDADE_MINIMA
             ]
+            auditoria.contar("aprovadas_score", len(vagas_filtradas))
 
             # Eixo secundário (Ibéria, quando ligado): mesma regra de cargo,
             # cidade diferente — sem duplicar o que já bateu na regra
@@ -377,17 +648,27 @@ def ciclo_de_busca(perfil: Perfil):
                 ids_filtradas = {v.id for v in vagas_filtradas}
                 candidatas, descartes_secundario = filtrar_vagas(vagas_para_avaliar, perfil.regras_eixo_secundario)
                 descartes_escopo_ciclo.update(descartes_secundario)
+                candidatas = [v for v in candidatas if v.id not in ids_filtradas]
+                for vaga_secundaria in candidatas:
+                    _enriquecer_e_pontuar(vaga_secundaria, cache_descricoes)
+                    auditoria.contar("avaliadas_compatibilidade")
+                    auditoria.registrar(vaga_secundaria, "avaliada_compatibilidade_secundaria", vaga_secundaria.compatibilidade_justificativa)
                 vagas_secundarias = [
                     v for v in candidatas
-                    if v.id not in ids_filtradas
-                    and v.relevancia >= LIMIAR_RELEVANCIA_MINIMA
+                    if v.compatibilidade_score >= LIMIAR_COMPATIBILIDADE_MINIMA
                 ]
+                auditoria.contar("aprovadas_score_secundaria", len(vagas_secundarias))
+                auditoria.contar("reprovadas_score_secundaria", len(candidatas) - len(vagas_secundarias))
 
             total_filtradas += len(vagas_filtradas) + len(vagas_secundarias)
+            auditoria.contar("atendem_criterios_finais", len(vagas_filtradas) + len(vagas_secundarias))
 
             novas_da_fonte = 0
             for vaga in vagas_filtradas:
+                auditoria.contar("elegiveis_notificacao")
                 if ja_vista(vaga):
+                    auditoria.contar("descartadas_duplicidade")
+                    auditoria.registrar(vaga, "rejeitada_duplicidade", "já registrada no banco")
                     continue
 
                 # Item 08: só notifica na hora quando a relevância passa do
@@ -415,16 +696,22 @@ def ciclo_de_busca(perfil: Perfil):
                     # e a vaga se perdia sem nunca ter sido notificada de
                     # verdade.
                     if not notificar_vaga(vaga):
+                        auditoria.contar("notificacoes_falhas")
+                        auditoria.registrar(vaga, "falha_notificacao", "Telegram retornou falha; vaga não marcada como vista")
                         logger.warning(
                             f"[{perfil.nome}] Falha ao notificar '{vaga.titulo}' - não marcada "
                             "como vista, tenta de novo no próximo ciclo."
                         )
                         continue
+                    auditoria.contar("notificacoes_enviadas")
+                    auditoria.registrar(vaga, "notificacao_enviada", "Telegram confirmou envio")
                     salvar_vaga(vaga, perfil_chave=perfil.chave)
                     logger.info(f"[{perfil.nome}] Nova vaga: {vaga.titulo} - {vaga.empresa}")
                 else:
-                    salvar_vaga(vaga, perfil_chave=perfil.chave, digest_pendente=True)
                     motivo_digest = "vaga antiga" if vaga.publicacao_antiga else f"relevância {vaga.relevancia}/10"
+                    auditoria.contar("vagas_enfileiradas_digest")
+                    auditoria.registrar(vaga, "enfileirada_digest", motivo_digest)
+                    salvar_vaga(vaga, perfil_chave=perfil.chave, digest_pendente=True)
                     logger.info(
                         f"[{perfil.nome}] Nova vaga (digest, {motivo_digest}): "
                         f"{vaga.titulo} - {vaga.empresa}"
@@ -434,25 +721,34 @@ def ciclo_de_busca(perfil: Perfil):
                 novas_da_fonte += 1
 
             for vaga in vagas_secundarias:
+                auditoria.contar("elegiveis_notificacao")
                 if ja_vista(vaga):
+                    auditoria.contar("descartadas_duplicidade")
+                    auditoria.registrar(vaga, "rejeitada_duplicidade", "já registrada no banco")
                     continue
 
                 # Mesma regra de vaga antiga do loop acima.
                 if vaga.relevancia >= LIMIAR_DIGEST_IMEDIATO and not vaga.publicacao_antiga:
                     if not notificar_vaga_exploratoria(vaga):
+                        auditoria.contar("notificacoes_falhas")
+                        auditoria.registrar(vaga, "falha_notificacao_exploratoria", "Telegram retornou falha; vaga não marcada como vista")
                         logger.warning(
                             f"[{perfil.nome}] Falha ao notificar '{vaga.titulo}' (exploratória) - "
                             "não marcada como vista, tenta de novo no próximo ciclo."
                         )
                         continue
+                    auditoria.contar("notificacoes_enviadas")
+                    auditoria.registrar(vaga, "notificacao_enviada_exploratoria", "Telegram confirmou envio")
                     salvar_vaga(vaga, perfil_chave=perfil.chave)
                     logger.info(
                         f"[{perfil.nome}] Nova vaga exploratória ({perfil.eixo_secundario_rotulo}): "
                         f"{vaga.titulo} - {vaga.empresa}"
                     )
                 else:
-                    salvar_vaga(vaga, perfil_chave=perfil.chave, digest_pendente=True, exploratoria=True)
                     motivo_digest = "vaga antiga" if vaga.publicacao_antiga else f"relevância {vaga.relevancia}/10"
+                    auditoria.contar("vagas_enfileiradas_digest")
+                    auditoria.registrar(vaga, "enfileirada_digest_exploratoria", motivo_digest)
+                    salvar_vaga(vaga, perfil_chave=perfil.chave, digest_pendente=True, exploratoria=True)
                     logger.info(
                         f"[{perfil.nome}] Nova vaga exploratória (digest, {motivo_digest}): "
                         f"{vaga.titulo} - {vaga.empresa}"
@@ -514,8 +810,38 @@ def ciclo_de_busca(perfil: Perfil):
             "Vale checar o log do GitHub Actions."
         )
 
-    _enviar_heartbeat_diario(perfil, total_novas, scrapers_com_problema, len(scrapers))
-    _enviar_digest_diario(perfil)
+    auditoria.contar("novas_registradas", total_novas)
+    _enviar_heartbeat_diario(
+        perfil, total_novas, scrapers_com_problema, len(scrapers), auditoria=auditoria
+    )
+    _enviar_digest_diario(perfil, auditoria=auditoria)
+    auditoria.finalizar()
+    logger.info(
+        f"[{perfil.nome}] Auditoria do funil: coletadas={auditoria.contadores.get('coletadas', 0)}, "
+        f"fontes_brutas={sum(v for k, v in auditoria.contadores.items() if k.startswith('brutas_fonte_'))}, "
+        f"falhas_fontes={auditoria.contadores.get('falhas_fontes', 0)}, "
+        f"fontes_sem_resultado={auditoria.contadores.get('fontes_sem_resultado', 0)}, "
+        f"descartadas_data={auditoria.contadores.get('descartadas_data', 0)}, "
+        f"descartadas_modalidade_local={auditoria.contadores.get('descartadas_modalidade_local', 0)}, "
+        f"descartadas_cargo={auditoria.contadores.get('descartadas_cargo', 0)}, "
+        f"descartadas_duplicidade={auditoria.contadores.get('descartadas_duplicidade', 0)}, "
+        f"descricao_completa={auditoria.contadores.get('descricao_completa', 0)}, "
+        f"descricao_insuficiente={auditoria.contadores.get('descricao_insuficiente', 0)}, "
+        f"avaliadas={auditoria.contadores.get('avaliadas_compatibilidade', 0)}, "
+        f"aprovadas_score={auditoria.contadores.get('aprovadas_score', 0)}, "
+        f"reprovadas_score={auditoria.contadores.get('reprovadas_score', 0)}, "
+        f"reprovadas_score_secundaria={auditoria.contadores.get('reprovadas_score_secundaria', 0)}, "
+        f"atendem_criterios_finais={auditoria.contadores.get('atendem_criterios_finais', 0)}, "
+        f"recuperadas_por_descricao={auditoria.contadores.get('recuperadas_por_descricao', 0)}, "
+        f"enfileiradas_digest={auditoria.contadores.get('vagas_enfileiradas_digest', 0)}, "
+        f"elegiveis_notificacao={auditoria.contadores.get('elegiveis_notificacao', 0)}, "
+        f"notificacoes_enviadas={auditoria.contadores.get('notificacoes_enviadas', 0)}, "
+        f"notificacoes_falhas={auditoria.contadores.get('notificacoes_falhas', 0)}, "
+        f"vagas_digest_enviadas={auditoria.contadores.get('vagas_digest_enviadas', 0)}, "
+        f"lotes_digest_falhos={auditoria.contadores.get('lotes_digest_falhos', 0)}, "
+        f"mensagens_sistema_falhas={auditoria.contadores.get('mensagens_sistema_falhas', 0)}; "
+        f"arquivo=data/audit/ciclos.jsonl"
+    )
 
 
 def _rodar_um_ciclo_de_cada(perfis: list[Perfil]):

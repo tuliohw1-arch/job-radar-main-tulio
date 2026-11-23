@@ -42,6 +42,15 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python main.py --perfil brasil --once
 
+      - name: Publicar auditoria estruturada do funil
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jobradar-auditoria-${{ github.run_id }}
+          path: job-radar-main/data/audit/ciclos.jsonl
+          if-no-files-found: warn
+          retention-days: 30
+
       - name: Persistir banco de vagas vistas
         working-directory: .
         run: |

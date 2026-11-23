@@ -1,5 +1,6 @@
 
 import json
+import time
 
 import requests
 
@@ -16,46 +17,53 @@ def enviar_mensagem(texto: str, reply_markup: dict | None = None) -> bool:
         return False
 
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
         "text": texto,
         "parse_mode": "HTML",
         "disable_web_page_preview": False,
     }
-    # Telegram exige reply_markup como string JSON quando o corpo do POST é
-    # form-encoded (o `data=` abaixo) — passar o dict cru falha silenciosamente
-    # (o teclado não aparece, sem erro nenhum reportado pela API).
     if reply_markup is not None:
         payload["reply_markup"] = json.dumps(reply_markup)
 
-    try:
-        resposta = requests.post(url, data=payload, timeout=10)
-        resposta.raise_for_status()
-        return True
-    # MEDIDO: logar a exceção direta (`{e}`) põe a URL inteira no log —
-    # `url` tem o token embutido (bot{TOKEN}/sendMessage), e a mensagem
-    # padrão de erro de conexão do requests/urllib3 (ProxyError,
-    # ConnectionError...) inclui a URL completa que falhou. 6 ocorrências
-    # reais em jobradar.log confirmaram o vazamento: arquivo é gitignored
-    # (não vai pro repo) mas existe em disco e o GitHub Actions manda a
-    # mesma mensagem pro stdout do job, visível em log de execução. HTTPError
-    # (erro de resposta, ex: 401/403 do próprio Telegram) tem `.response`
-    # com status e motivo, sem token nenhum — loga isso. Qualquer outra
-    # RequestException (falha de conexão, nunca chegou a ter resposta) loga
-    # só o tipo da exceção — nunca `str(e)`, nunca `url`.
-    except requests.HTTPError as e:
-        status = e.response.status_code if e.response is not None else None
-        motivo = e.response.reason if e.response is not None else "sem detalhe"
-        logger.error(f"Erro ao enviar mensagem no Telegram: HTTP {status} ({motivo})")
-        return False
-    except requests.RequestException as e:
-        logger.error(
-            f"Erro ao enviar mensagem no Telegram: {type(e).__name__} "
-            "(falha de conexão, sem resposta do servidor)"
-        )
-        return False
-
+    # Retry apenas quando a resposta HTTP deixa claro que a API recusou ou
+    # falhou temporariamente. Timeout/conexão sem resposta tem resultado
+    # ambíguo (a mensagem pode ter sido aceita); não repetir automaticamente
+    # evita duplicatas. O ciclo seguinte volta a tentar porque a vaga não é salva.
+    for tentativa in range(3):
+        try:
+            resposta = requests.post(url, data=payload, timeout=10)
+            if resposta.status_code in (429, 500, 502, 503, 504) and tentativa < 2:
+                try:
+                    atraso = float((resposta.headers or {}).get("Retry-After", 0))
+                except (TypeError, ValueError):
+                    atraso = 0
+                time.sleep(min(max(atraso, 1.0 if resposta.status_code == 429 else 0.5), 10.0))
+                continue
+            resposta.raise_for_status()
+            try:
+                corpo = resposta.json()
+            except (ValueError, AttributeError):
+                corpo = {"ok": True}
+            if corpo.get("ok") is False:
+                logger.error("Telegram recusou a mensagem (API retornou ok=false).")
+                return False
+            return True
+        except requests.HTTPError as e:
+            status = e.response.status_code if e.response is not None else None
+            motivo = e.response.reason if e.response is not None else "sem detalhe"
+            logger.error(f"Erro ao enviar mensagem no Telegram: HTTP {status} ({motivo})")
+            return False
+        except requests.Timeout:
+            logger.error("Timeout ao enviar mensagem no Telegram; resultado pode ser ambíguo, sem retry automático.")
+            return False
+        except requests.RequestException as e:
+            logger.error(
+                f"Erro ao enviar mensagem no Telegram: {type(e).__name__} "
+                "(falha de conexão, sem resposta do servidor)"
+            )
+            return False
+    return False
 
 def _linha_relevancia(pontos: int) -> str:
     """Renderiza Job.relevancia (0-10, ver pontuar_relevancia em job.py) como
@@ -113,8 +121,11 @@ def notificar_vaga(job) -> bool:
     texto = (
         f"🚨 <b>Nova vaga encontrada!</b>\n\n"
         f"{_linha_aviso_antiga(job)}"
-        f"<b>Relevância:</b> {_linha_relevancia(job.relevancia)}\n"
+        f"<b>Compatibilidade:</b> {getattr(job, 'compatibilidade_score', 0)}/100\n"
+        f"<b>Relevância anterior:</b> {_linha_relevancia(job.relevancia)}\n"
         f"<b>Motivo:</b> {job.motivo}\n"
+        f"<b>Descrição:</b> {getattr(job, 'status_extracao', 'indisponivel')}\n"
+        f"<b>Análise:</b> {(getattr(job, 'compatibilidade_justificativa', '') or 'Informações insuficientes')[:350]}\n"
         f"<b>Empresa:</b> {job.empresa}\n"
         f"<b>Cargo:</b> {job.titulo}\n"
         f"<b>Nível:</b> {job.senioridade}\n"
@@ -170,11 +181,17 @@ def montar_digest(vagas: list[tuple], rotulo_perfil: str) -> list[str]:
     ~93% do volume indo pro digest (ver LIMIAR_DIGEST_IMEDIATO em
     config.py), um dia cheio passa fácil dos 4096 caracteres do Telegram
     — quebra em partes numeradas em vez de estourar/truncar."""
-    linhas = [
-        f'{"🧭" if exploratoria else "•"} {_linha_relevancia(relevancia or 0)} '
-        f'<a href="{link}">{titulo}</a> — {empresa}'
-        for titulo, empresa, link, relevancia, exploratoria in vagas
-    ]
+    linhas = []
+    for item in vagas:
+        # Compatibilidade foi adicionada à tupla do SQLite; aceitar também
+        # tuplas antigas de 5 campos mantém testes/dados legados compatíveis.
+        titulo, empresa, link, relevancia, exploratoria = item[:5]
+        compatibilidade = item[5] if len(item) >= 6 else None
+        linha_score = f"🎯 <b>{compatibilidade}/100</b> · " if compatibilidade is not None else ""
+        linhas.append(
+            f'{"🧭" if exploratoria else "•"} {linha_score}{_linha_relevancia(relevancia or 0)} '
+            f'<a href="{link}">{titulo}</a> — {empresa}'
+        )
 
     partes: list[list[str]] = []
     parte_atual: list[str] = []
