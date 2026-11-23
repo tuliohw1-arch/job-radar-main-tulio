@@ -126,7 +126,7 @@ def test_score_compatibilidade_fica_entre_zero_e_cem_e_explica_sinais():
 
 def test_descricao_indisponivel_nao_e_tratada_como_completa_e_limita_confianca():
     resultado = pontuar_compatibilidade(_job(descricao="", titulo="Analista de CRM Júnior"))
-    assert resultado["score"] < LIMIAR_COMPATIBILIDADE_MINIMA
+    assert 1 <= resultado["score"] <= 54
     assert resultado["informacoes_insuficientes"] is True
     assert any("Descrição ausente" in item for item in resultado["lacunas"])
 
