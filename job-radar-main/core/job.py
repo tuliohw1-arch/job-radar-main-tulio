@@ -146,14 +146,15 @@ def _modalidade_contraditoria(texto: str) -> str | None:
 _FLAGS_REMOTO = ("remoto", "remota", "remote")
 
 
-def _confirma_remoto(modalidade_norm: str, local_norm: str, titulo_norm: str = "") -> bool:
-    """Confirma remoto por modalidade ou por indicação explícita nos campos.
+def _confirma_remoto(
+    modalidade_norm: str, local_norm: str, titulo_norm: str = "",
+    link_norm: str = "", descricao_norm: str = "",
+) -> bool:
+    """Aceita sinal remoto em modalidade, local, título, URL ou descrição.
 
-    Sinais como "homeoffice" ou "Remote" podem vir no título ou na localização,
-    mesmo quando a fonte não preenche o campo modalidade. Evidência explícita
-    de híbrido/presencial em qualquer um desses campos prevalece e reprova.
+    Evidência afirmativa híbrida/presencial em qualquer campo prevalece.
     """
-    textos = (modalidade_norm, local_norm, titulo_norm)
+    textos = (modalidade_norm, local_norm, titulo_norm, link_norm, descricao_norm)
     if any(_modalidade_contraditoria(texto) for texto in textos):
         return False
     return any(_e_remoto(texto) for texto in textos)
@@ -1174,7 +1175,7 @@ class Job:
         declaram home office/remoto, completa como Remoto. Se qualquer desses
         campos declarar híbrido ou presencial, essa informação prevalece.
         """
-        textos = (self.modalidade or "", self.titulo or "", self.local or "")
+        textos = (self.modalidade or "", self.titulo or "", self.local or "", self.link or "")
         modalidade_contraditoria = next(
             (_modalidade_contraditoria(texto) for texto in textos
              if _modalidade_contraditoria(texto)),
@@ -1352,6 +1353,8 @@ class Job:
             _modalidade_contraditoria(self.modalidade)
             or _modalidade_contraditoria(self.titulo)
             or _modalidade_contraditoria(self.local)
+            or _modalidade_contraditoria(self.link)
+            or _modalidade_contraditoria(self.descricao)
         )
 
         bate_forte = any(
@@ -1395,7 +1398,10 @@ class Job:
         quer_remoto = any(_normalizar(c) in _FLAGS_REMOTO for c in regras.cidades)
         bate_remoto = (
             quer_remoto
-            and _confirma_remoto(modalidade_norm, local_norm, titulo_norm)
+            and _confirma_remoto(
+                modalidade_norm, local_norm, titulo_norm,
+                _normalizar(self.link), _normalizar(self.descricao),
+            )
             and modalidade_contraditoria is None
         )
 
@@ -1623,7 +1629,10 @@ class Job:
             return None
         modalidade_norm = _normalizar(self.modalidade)
         quer_remoto = any(_normalizar(c) in _FLAGS_REMOTO for c in regras.cidades)
-        if not (quer_remoto and _confirma_remoto(modalidade_norm, _normalizar(self.local))):
+        if not (quer_remoto and _confirma_remoto(
+            modalidade_norm, _normalizar(self.local), _normalizar(self.titulo),
+            _normalizar(self.link), _normalizar(self.descricao),
+        )):
             return None
         escopos = self.escopo_remoto
         if not escopos:
