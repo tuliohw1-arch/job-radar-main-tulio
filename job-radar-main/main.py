@@ -468,7 +468,8 @@ def ciclo_de_busca(perfil: Perfil):
                     # Se a fonte não informou modalidade, tente descobrir pelo
                     # corpo do anúncio antes de rejeitar. Modalidade híbrida/
                     # presencial explícita não dispara requisição extra.
-                    if not (vaga_modalidade.modalidade or "").strip():
+                    modalidade_atual = (vaga_modalidade.modalidade or "").strip().casefold()
+                    if modalidade_atual not in ("remoto", "híbrido", "hibrido", "presencial"):
                         chave_descricao = (vaga_modalidade.link or "").split("#", 1)[0]
                         resultado_descricao = cache_descricoes.get(chave_descricao)
                         if resultado_descricao is None:
@@ -510,9 +511,12 @@ def ciclo_de_busca(perfil: Perfil):
             descartes_escopo_ciclo.update(descartes)
 
             ids_aprovadas = {v.id for v in vagas_filtradas}
+            # Toda vaga recente com evidência remota chega à avaliação por
+            # conteúdo, inclusive títulos genéricos fora da taxonomia fechada.
+            # Isso amplia recall sem liberar vagas sem relação com o currículo:
+            # a pontuação exige sinais profissionais concretos.
             candidatas_descricao = [
-                v for v in vagas_para_avaliar
-                if v.id not in ids_aprovadas and v.rejeitada_so_pelo_cargo(perfil.regras)
+                v for v in vagas_para_avaliar if v.id not in ids_aprovadas
             ]
             titulo_barrou_em_cidade.extend(
                 f"{v.titulo} — {v.empresa} ({v.local})"
@@ -535,9 +539,15 @@ def ciclo_de_busca(perfil: Perfil):
                     vaga_por_descricao, "avaliada_compatibilidade_titulo_rejeitado",
                     vaga_por_descricao.compatibilidade_justificativa
                 )
-                familia_comprovada = any(
-                    str(criterio).startswith("Família de cargo alinhada")
-                    for criterio in (vaga_por_descricao.compatibilidade_criterios or [])
+                criterios = vaga_por_descricao.compatibilidade_criterios or []
+                compatibilidade_profissional = any(
+                    str(criterio).startswith((
+                        "Família de cargo alinhada",
+                        "Experiência transferível em suporte/operações",
+                        "Ferramentas compatíveis com experiência/certificações",
+                        "Alinhamento com objetivo de transição",
+                    ))
+                    for criterio in criterios
                 )
                 modalidade_confirmada = (
                     perfil.chave != "brasil"
@@ -545,8 +555,7 @@ def ciclo_de_busca(perfil: Perfil):
                 )
                 if (
                     modalidade_confirmada
-                    and vaga_por_descricao.status_extracao == "completa"
-                    and familia_comprovada
+                    and compatibilidade_profissional
                     and vaga_por_descricao.compatibilidade_score >= LIMIAR_COMPATIBILIDADE_MINIMA
                 ):
                     vaga_por_descricao.relevancia = max(
@@ -563,7 +572,7 @@ def ciclo_de_busca(perfil: Perfil):
                     auditoria.contar("rejeitadas_por_descricao")
                     auditoria.registrar(
                         vaga_por_descricao, "rejeitada_por_descricao",
-                        "modalidade contraditória, descrição insuficiente, sem família alinhada ou score abaixo do limiar"
+                        "modalidade contraditória ou nenhum sinal profissional compatível com o currículo"
                     )
 
             # A descrição é enriquecida para vagas que passaram no título e para
