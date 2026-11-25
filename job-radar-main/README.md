@@ -1,199 +1,71 @@
-<div align="center">
+# JobRadar — projeto de estudo baseado em referência
 
-# 📡 JobRadar
-### Monitor de vagas remotas de CRM e áreas adjacentes
+> **Origem e atribuição:** este projeto foi modelado a partir do [JobRadar de Liliam Kezia Oliveira Souza](https://github.com/liliamkezia-star/job-radar), apresentado também [nesta publicação no LinkedIn](https://pt.linkedin.com/posts/liliamkezia_python-dados-bi-activity-7494394777455542272-4tfh). Esta versão não é apresentada como criação inteiramente original. A autoria da referência é reconhecida; este repositório documenta uma versão de estudo/adaptação.
 
-![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![Playwright](https://img.shields.io/badge/Playwright-Scraping-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-Banco%20versionado-07405E?style=for-the-badge&logo=sqlite&logoColor=white)
-![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-Cron-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)
-![Tests](https://img.shields.io/badge/testes-487%20esperados-informational?style=for-the-badge)
-![Status](https://img.shields.io/badge/status-em%20produção-success?style=for-the-badge)
+## Objetivo
 
-**Autora:** Liliam Kezia Oliveira Souza
+Automatizar a busca, filtragem e organização de oportunidades de trabalho segundo critérios configurados, usando Python. O projeto explora coleta de dados, regras de negócio, deduplicação, persistência local e notificações.
 
-</div>
+## Tecnologias e componentes
 
----
+Conforme a estrutura atual do repositório:
 
-## 💎 Proposta de valor
+- **Python** para a aplicação e as regras de filtragem.
+- **Playwright** e `requests` para consultar fontes de vagas.
+- **SQLite** para manter o histórico e evitar notificações duplicadas.
+- **GitHub Actions** para automação de execução e integração contínua.
+- **pytest** para os testes automatizados.
+- **Telegram** para notificações.
 
-> Em cidade pequena, vaga boa de Dados/BI aparece pouco e some rápido — quem checa o board duas vezes por dia perde para quem checou na primeira hora. **JobRadar** substitui essa checagem manual: varre **9 fontes** a cada **3 horas**, filtra por cargo, cidade, mercado e idioma em três níveis de confiança, pontua cada vaga por relevância e notifica no Telegram — de graça, sem servidor próprio, 24 horas por dia.
+Os critérios e fontes são específicos desta versão e podem mudar. O ranqueamento é feito por regras explícitas; não é um sistema de inteligência artificial ou aprendizado de máquina.
 
-## 📄 Resumo executivo
+## Como funciona
 
-Entre 07 e 29 de agosto de 2026, o sistema processou **2.285 vagas únicas** sem intervenção manual.
+1. Consulta fontes configuradas.
+2. Normaliza as vagas e aplica critérios de cargo, localização, modalidade e recência.
+3. Calcula relevância com regras explícitas e remove duplicatas.
+4. Registra o estado no SQLite.
+5. Envia notificações pelo Telegram e executa verificações automatizadas no GitHub Actions.
 
-| Indicador | Número |
-|---|---|
-| 📊 Vagas processadas (deduplicadas) | **2.285** |
-| 🧪 Testes automatizados (CI a cada push) | **481** |
-| 🌎 Fontes monitoradas | **9** |
-| 🏙️ Cidades-alvo + remoto | **9 + remoto** |
-| ⏱️ Frequência de checagem | **a cada 3h** |
-| 🔗 Concentração numa única fonte (LinkedIn) | **93,8%** ⚠️ |
-| 💰 Custo de infraestrutura | **R$ 0** |
+## Execução local
 
-A concentração em LinkedIn está documentada como **risco**, não como conquista: o endpoint usado não é oficial, e o sistema perde quase todo o alcance se ele mudar ou bloquear. Ver [Limites conhecidos](#-limites-conhecidos).
-
----
-
-## 🔬 Como as decisões são tomadas
-
-Esta é a parte do projeto que mais me interessa como analista: **nenhuma mudança de comportamento entra sem medição antes.** Não porque seja elegante, mas porque a alternativa falhou de forma cara — e a maior parte dos defeitos encontrados aqui era invisível no log.
-
-O padrão que se repetiu: o robô parecia saudável, o GitHub Actions ficava verde, vagas chegavam normalmente — e mesmo assim faltava vaga. Cada caso só apareceu quando alguém desconfiou de um **número**, não de uma mensagem de erro.
-
-**Dois exemplos, com o antes e depois medidos:**
-
-O LinkedIn não reconhece `location=Brasil`. Ele não devolve erro — devolve um resultado genérico dos Estados Unidos, indistinguível de uma busca bem-sucedida. A busca nacional brasileira nunca funcionou, e ninguém tinha como notar.
-
-| LinkedIn (perfil Brasil) | Vagas | Do Brasil | Dos EUA |
-|---|---|---|---|
-| Antes (`location=Brasil`) | 910 | **19 (2,1%)** | 268 |
-| Depois (`location=Brazil`) | 813 | **354 (43,5%)** | **0** |
-
-O card do LinkedIn traz a data de publicação em inglês (`"4 months ago"`), mas a extração procurava padrões em português. O campo vinha vazio, então vaga de quatro meses era notificada como se fosse nova.
-
-| Data de publicação preenchida | Antes | Depois |
-|---|---|---|
-| Vagas do LinkedIn com data | 231/1.639 (14,1%) | **504/504 (100%)** |
-
-**Três hipóteses minhas foram derrubadas pelos próprios dados** — e é isso que a medição serve para fazer:
-
-- *"Esses avisos de vaga perdida são alarme falso"* — eram, em três fontes. Na quarta, não: as buscas devolviam 10 resultados quando rodadas isoladas. O aviso estava certo e vaga estava sendo perdida.
-- *"O perfil internacional só precisa das keywords que o Brasil já tem"* — alinhar as listas ganhou **zero** vaga. O que ganhou 7 foi um mecanismo que aquele perfil não tinha.
-- *"Cidade pequena com ferramenta de nicho não tem vaga mesmo"* — tinha 10.
-
-Quando a medição não é possível, isso fica escrito no código em vez de escondido. A correção de rate-limit do LinkedIn, por exemplo, só se manifesta no IP de datacenter do GitHub Actions e não reproduz localmente — então foi desenhada para ser **segura por construção**: ajuda se o diagnóstico estiver certo, e não piora nada se estiver errado.
-
----
-
-## 📸 Como chega para você
-
-Vaga de alta relevância chega na hora, com nível, data de publicação e link. O resto entra num resumo diário ranqueado — sem virar spam. Vaga com mais de 30 dias ganha aviso de "pode já estar preenchida" e sai do alerta imediato, mas nunca é descartada.
-
----
-
-## 🗂️ Sumário
-
-- [Como as decisões são tomadas](#-como-as-decisões-são-tomadas)
-- [Como funciona (pipeline)](#-como-funciona-pipeline)
-- [Arquitetura técnica](#%EF%B8%8F-arquitetura-técnica)
-- [Regras de negócio](#-regras-de-negócio)
-- [Estrutura do repositório](#-estrutura-do-repositório)
-- [Como rodar](#-como-rodar)
-- [Testes](#-testes)
-- [Limites conhecidos](#-limites-conhecidos)
-
----
-
-## 🧭 Como funciona (pipeline)
-
-| Etapa | O que faz |
-|---|---|
-| **Busca** | Varre as fontes em paralelo, com rodízio de termos para controlar custo por ciclo |
-| **Filtra** | Cargo (forte / ambíguo + qualificador / ferramenta + cargo), cidade ou mercado remoto, idioma |
-| **Pontua** | Score 1–10 por vaga: cargo, ferramenta, senioridade, mercado, idioma — soma de sinais, sem IA |
-| **Deduplica** | Por link e por empresa+título, para pegar a mesma vaga republicada em fonte diferente |
-| **Notifica** | Alta relevância na hora; o resto num resumo diário ranqueado, melhor vaga no topo |
-| **Aprende** | Botão 👍/👎 em cada notificação — feedback vira dado para medir precisão por fonte e por semana |
-
-## 🏗️ Arquitetura técnica
-
-- **Filtro em 3 níveis de confiança:** cargo inequívoco passa sozinho; cargo ambíguo (ex: `Analyst`) só conta com um qualificador de dados junto no título; ferramenta (ex: `Power BI`) só conta com palavra de cargo junto. Nada aprova por palavra solta — é o que segura `Financial Analyst` e `HR Analyst` fora do radar.
-- **Score de relevância sem ML:** 5 sinais conhecidos, pesos calibrados contra o histórico real do banco. Conjunto pequeno e conhecido não precisa de modelo — precisa de critério explicável.
-- **Zero infraestrutura:** GitHub Actions como motor de cron, SQLite como banco versionado no próprio Git. O histórico de vagas já vistas *é* o commit.
-- **Resiliente:** nunca marca vaga como vista sem confirmar que a notificação saiu; alerta se a maioria das fontes falhar num ciclo; heartbeat diário confirmando que o robô está de pé; segunda tentativa quando uma busca volta vazia.
-- **481 testes em CI:** cada caso documenta um bug real já corrigido nesta base — inclusive os que ainda não foram corrigidos, fixados como comportamento conhecido em vez de escondidos.
-
-## 📋 Regras de negócio
-
-O filtro existe para uma busca específica, e as regras estão explícitas em `core/config.py`:
-
-- **Brasil remoto:** somente vagas explicitamente remotas e com escopo de contratação no Brasil.
-- **Recência:** no perfil Brasil, a data original deve ser verificável e ter no máximo 5 dias; data de coleta nunca substitui data de publicação.
-- **Híbrido e presencial:** sempre rejeitados, inclusive em Belo Horizonte.
-- **Internacional:** o workflow não executa o perfil internacional; vagas com escopo explícito fora do Brasil ou sem escopo confirmado são rejeitadas.
-- **Taxonomia de carreira (Brasil):** grupos A — CRM/CRM Operations/CS Ops (40%), B — Business Operations/Sales Ops/RevOps/implantação/onboarding (40%) e C — Marketing Operations/automação/suporte SaaS (20%). Os pesos são uma proposta de priorização, não probabilidades de contratação.
-- **Compatibilidade:** CRM/CRM Operations é prioridade; CS Ops e operações adjacentes entram por títulos específicos. Vagas abaixo de 7/10 são descartadas, não enviadas ao digest.
-
-Cidade homônima é tratada: `Campina Grande do Sul, Paraná` e `Fortaleza de Minas, Minas Gerais` são barradas pela conferência de UF, que entende tanto a sigla quanto o estado por extenso.
-
-## 📁 Estrutura do repositório
-
-```
-JobRadar/
-├── main.py                      ← motor único: um ciclo de busca por perfil
-├── relatorio_precisao.py        ← aprovadas/notificadas por fonte e por semana
-├── core/
-│   ├── perfis.py                ← Brasil vs Internacional (dado, não lógica duplicada)
-│   ├── config.py                ← cargos, cidades, termos, pesos (perfil Brasil)
-│   ├── config_intl.py           ← o mesmo para o perfil internacional
-│   ├── job.py                   ← Job, filtro, score de relevância
-│   └── logger.py
-├── database/
-│   └── database.py              ← SQLite: dedup, fila do digest, metadados
-├── notifier/
-│   └── telegram.py              ← notificação individual, digest, botão 👍/👎
-├── scrapers/                    ← um módulo por fonte
-├── tests/                       ← 481 casos, roda em CI a cada push
-├── data/
-│   └── jobs.db                  ← banco versionado (histórico de dedup)
-└── .github/workflows/
-    ├── jobradar.yml             ← cron de produção (a cada 3h)
-    └── testes.yml               ← CI
-```
-
-## 💻 Como rodar
+Requisitos: Python 3.11 ou superior.
 
 ```bash
-git clone <repo>
-cd JobRadar
-python -m venv venv && venv\Scripts\activate   # Linux/Mac: source venv/bin/activate
+git clone https://github.com/tuliohw1-arch/job-radar-main-tulio.git
+cd job-radar-main-tulio/job-radar-main
+python -m venv .venv
+```
+
+Ative o ambiente virtual e instale as dependências:
+
+```bash
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+
+# Linux/macOS
+source .venv/bin/activate
+
 pip install -r requirements.txt
 python -m playwright install chromium
 ```
 
-Criar `.env` na raiz com `TELEGRAM_BOT_TOKEN` e `TELEGRAM_CHAT_ID` (via [@BotFather](https://t.me/BotFather)), depois:
+Configure `TELEGRAM_BOT_TOKEN` e `TELEGRAM_CHAT_ID` no ambiente local antes de executar. Não compartilhe esses valores nem os salve no repositório.
 
 ```bash
-python main.py --perfil brasil internacional --once   # um ciclo e encerra
-python main.py --perfil brasil                        # contínuo, a cada 3h
-```
-
-Para testar sem tocar no banco de produção:
-
-```bash
-JOBRADAR_DB_PATH=data/teste.db python main.py --perfil brasil --once
-```
-
-## 🧪 Testes
-
-```bash
+python main.py --perfil brasil --once
 pytest tests/ -v
 ```
 
-481 casos em 17 arquivos, cobrindo filtro, regras de negócio, paginação de cada fonte, datas de publicação e o relatório de precisão — todos rodando a cada push via GitHub Actions.
+## Limitações
 
-Os testes seguem uma convenção: **cada arquivo começa explicando o bug real que o motivou**, com o número medido. Um teste que só afirma que `2 + 2 = 4` não conta; o que conta é o que quebrou de verdade e como se descobriu.
+- As fontes externas e seus formatos podem mudar, interrompendo a coleta.
+- A disponibilidade e a cobertura das vagas dependem das fontes consultadas.
+- Os critérios de filtragem podem deixar passar oportunidades ou descartar vagas relevantes.
+- A automação não envia candidaturas; as oportunidades devem ser avaliadas manualmente.
 
-## ⚠️ Limites conhecidos
+## Créditos e licença
 
-Registrados de propósito — problema documentado é problema que alguém pode consertar.
+A referência original é de **Liliam Kezia Oliveira Souza**: [JobRadar original](https://github.com/liliamkezia-star/job-radar). Este trabalho reconhece essa origem e se apresenta como estudo baseado em uma solução existente.
 
-| Limite | Situação |
-|---|---|
-| **93,8% das vagas vêm do LinkedIn** | Endpoint não oficial. Se mudar ou bloquear, o sistema perde quase todo o alcance. |
-| **Rate-limit em IP de datacenter** | Buscas voltam vazias no GitHub Actions e não reproduzem em rede residencial. Mitigado com segunda tentativa; a verificação vem dos logs de produção. |
-| **Fontes secundárias rendem pouco** | Catho, GeekHunter e 99Jobs somam menos de 3% das vagas. Funcionam — só não têm volume no nicho buscado. Mantidas porque o critério de remoção é estar quebrada, não render pouco. |
-| **O filtro lê só o título** | Vaga de BI com nome comercial (ex: "Analista Comercial" com Power BI na descrição) escapa. É o preço de manter o ruído perto de zero, e está instrumentado no log para virar decisão com número. |
-| **Ruído aceito conscientemente** | `Data Center Operations Analyst` passa, porque "data center" casa o qualificador "data". Não apareceu nas amostras medidas; está fixado em teste para quando incomodar. |
-
----
-
-<div align="center">
-
-*Case de portfólio em automação de dados — Python, Playwright, SQLite, GitHub Actions e engenharia de filtro sem ML.*
-
-</div>
+O arquivo `LICENSE` deste repositório foi preservado. Consulte-o para os termos aplicáveis; este README não concede permissões adicionais nem substitui esses termos.
