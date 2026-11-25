@@ -3,7 +3,16 @@ name: JobRadar
 on:
   schedule:
     - cron: "0 */3 * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      dias_maximos_publicacao:
+        description: "Limite de idade da vaga em dias (teste controlado: 5 ou 7)"
+        required: true
+        type: choice
+        options:
+          - "5"
+          - "7"
+        default: "5"
 
 concurrency:
   group: jobradar-cycle
@@ -43,6 +52,7 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          DIAS_MAXIMOS_PUBLICACAO: ${{ inputs.dias_maximos_publicacao || '5' }}
         # O workflow de produção executa apenas o perfil Brasil. O scraper
         # brasileiro busca exclusivamente vagas remotas no mercado brasileiro.
         run: python main.py --perfil brasil --once
